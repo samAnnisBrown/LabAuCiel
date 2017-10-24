@@ -17,7 +17,8 @@ application.secret_key = "H3%GNalCn11B^Q2a9Lccgy*s0"
 @application.before_request
 def before_request():
     if "127.0.0.1" not in request.host:
-        if not request.is_secure:
+        x_forwarded_proto = request.headers.get('X-Forwarded-Proto')
+        if x_forwarded_proto == 'http':
             url = request.url.replace('http://', 'https://', 1)
             #code = 301
             return redirect(url)
