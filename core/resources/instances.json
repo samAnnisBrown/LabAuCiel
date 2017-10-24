@@ -1,0 +1,48 @@
+{
+    "Instances": [
+        {
+            "InstanceSpec": "(1vCPU, 0.5GB)",
+            "InstanceName": "t2.nano"
+        },
+        {
+            "InstanceSpec": "(1vCPU, 1GB)",
+            "InstanceName": "t2.micro"
+        },
+        {
+            "InstanceSpec": "(1vCPU, 2GB)",
+            "InstanceName": "t2.small"
+        },
+        {
+            "InstanceSpec": "(2vCPU, 4GB)",
+            "InstanceName": "t2.medium"
+        },
+        {
+            "InstanceSpec": "(2vCPU, 8GB)",
+            "InstanceName": "t2.large"
+        },
+        {
+            "InstanceSpec": "(4vCPU, 16GB)",
+            "InstanceName": "t2.xlarge"
+        },
+        {
+            "InstanceSpec": "(8vCPU, 32GB)",
+            "InstanceName": "t2.2xlarge"
+        },
+        {
+            "InstanceSpec": "(16vCPU, 30GB)",
+            "InstanceName": "c4.4xlarge"
+        },
+        {
+            "InstanceSpec": "(36vCPU, 60GB)",
+            "InstanceName": "c4.8xlarge"
+        },
+        {
+            "InstanceSpec": "(8vCPU, 61GB)",
+            "InstanceName": "r4.2xlarge"
+        },
+        {
+            "InstanceSpec": "(16vCPU, 122GB)",
+            "InstanceName": "r4.4xlarge"
+        }
+    ]
+}

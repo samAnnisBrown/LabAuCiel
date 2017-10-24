@@ -1,0 +1,7 @@
+flask
+flask-login
+flask-wtf
+boto3
+gunicorn
+psycopg2
+pyyaml

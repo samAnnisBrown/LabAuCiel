@@ -1,0 +1,249 @@
+{% extends "launch.html" %}
+{% block content %}
+<script src="static/js/moment.js"></script>
+<div style="width:98%; display: block; margin-left: auto; margin-right: auto">
+    <table style="width: 100%">
+        <tbody>
+            <tr>
+                <td style="vertical-align: middle;"><h3>Running Labs</h3></td>
+                <td style="vertical-align: middle; text-align: right"><button type="button" class="btn btn-default" onclick="fullrefresh()">Refresh Labs</button></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div style="width:98%; display: block; margin-left: auto; margin-right: auto">
+  <table class="table" style="text-align:center;">
+    <thead>
+      <tr>
+        <th style="text-align:center;">Lab Name</th>
+        <th style="text-align:center;">Region</th>
+        <th style="text-align:center;">Instance Size</th>
+        <th style="text-align:center;">Key Pair</th>
+        <th style="text-align:center;">Public IP</th>
+        <th style="text-align:center;">Download RDP</th>
+        <th style="text-align:center;">Remaining Time</th>
+        <th style="text-align:center;">Add Time</th>
+        <th style="text-align:center;">Compute Cost</th>
+        <th style="text-align:center;">Build Progress</th>
+        <th style="text-align:center;">Delete</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in my_list %}
+        {% if (item['Active'] == 1) or (item['Active'] == '1') %}
+        <tr>
+            <td style="vertical-align: middle;">{{ item['StackName'] }}</td>
+            <td style="vertical-align: middle;">{{ item['FriendlyRegion'] }}</td>
+            <td style="vertical-align: middle;">{{ item['InstanceSize'] }}</td>
+            <td style="vertical-align: middle;">{{ item['Keypair'] }}</td>
+            <td style="vertical-align: middle;"><span id="{{ item['StackName'] }}_pubip">{{ item['PublicIP'] }}</span></td>
+            <td style="vertical-align: middle;"><button type="button" class="btn btn-default" onclick="downloadRdp('{{ item['StackName'] }}')">RDP File</button></td>
+            <td><h4><span class="label label-success" id="{{ item['StackName']}}_countdown"></span></h4></td>
+            <td style="vertical-align: middle;">
+            <div class="input-group">
+            <select class="form-control" id="{{ item['StackName'] }}_time">
+                <option value='15'>15 mins</option>
+                <option value='30'>30 mins</option>
+                <option value='60'>1 hour</option>
+                <option value='120'>2 Hours</option>
+                <option value='240'>4 Hours</option>
+                <option value='720'>12 Hours</option>
+                <option value='1440'>1 Day</option>
+                <option value='2880'>2 Days</option>
+            </select>
+            <span class="input-group-btn">
+                <button type="button" class="btn btn-default" onclick="addTime('{{ item['StackName'] }}', '{{ item['Region'] }}', '{{ item['ID'] }}', '{{ item['InstanceSize'] }}', '{{ item['Cost'] }}')">Add</button>
+            </span>
+            </div>
+        </td>
+        <td style="vertical-align: middle; color: dimgray; font-weight: bold">${{ item['Cost']}}</td>
+        <td style="vertical-align: middle;">
+            <div class="progress" style=" margin-bottom: 0px" id="{{ item['StackName'] }}_progress">
+                <div class="progress-bar progress-bar-success" role="progressbar" id="{{ item['StackName'] }}_bar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 0%"><span class="sr-only">60% Complete</span></div>
+            </div>
+        </td>
+        <td><button type="button" class="btn btn-danger" onclick="deleteInstance('{{ item['StackName'] }}', '{{ item['Region'] }}', '{{ item['ID'] }}', '{{ item['StartTime'] }}', '{{ item['InstanceSize'] }}')">Delete</button></td>
+        </tr>
+        {% endif %}
+      {% endfor %}
+      {% if activelabs == 0 %}
+      <tbody>
+        <tr>
+            <td colspan="11"><h4>Launch a Lab and it will appear here!</h4></td>
+        </tr>
+      </tbody>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+<script>
+    // --------------------------------------------- INTERACTIVE FUNCTIONS -------------------------------------------------------
+    function deleteInstance(stackname, region, stackid, starttime, instancesize) {
+        swal({
+            title: 'Delete Lab?',
+            type: 'error',
+            showCancelButton: true,
+            confirmButtonColor: '#9f1c19',
+            cancelButtonColor: '#b9b5ba',
+            confirmButtonText: 'Delete Lab!',
+            showLoaderOnConfirm: true,
+            preConfirm: function () {
+            return new Promise(function (resolve, reject) {
+                setTimeout(function() {
+                    $.ajax({
+                        type: "GET",
+                        url: '/cfdelete',
+                        data: {'stackname': stackname,
+                            'region': region,
+                            'stackid': stackid,
+                            'starttime': starttime,
+                            'instancesize': instancesize
+                        },
+                        success: function(){
+                            resolve()
+                        }
+                   });
+                }, 2000)
+                })
+            },
+            }).then(function () {
+                swal(
+                    'Deleted!',
+                    'Your lab has been deleted.',
+                    'success'
+                ).then(function () {
+                    location.reload();
+                })
+            })
+    }
+
+    function addTime(stackname, region, stackid, instancesize, cost) {
+        var time_to_add = document.getElementById(stackname + '_time').value;
+        var publicip = document.getElementById(stackname + '_pubip').innerHTML;
+        if (publicip.length < 1) {
+            swal('Nope!', "You can't add time just yet.  Wait for the lab to build first. (Hint: you can add time once a public IP is available.  Click 'Refresh Labs' to see if one's ready.", 'error')
+            return;
+        }
+        swal('Adding time...')
+        swal.showLoading()
+        $.ajax({
+            type: "GET",
+            url: "/addtime",
+            data: {
+                "stackname": stackname,
+                "region": region,
+                "stackid": stackid,
+                "add_mins": time_to_add,
+                "instancesize": instancesize,
+                "cost": cost
+            },
+            success: function(response){
+                    if (publicip.length < 1) {
+                        swal('Merde!', response['response'][0], 'error')
+                    } else {
+                        swal('Added!', 'Added ' + time_to_add + ' minutes to your lab.', 'success').then(function () {
+                            location.reload()
+                        })
+                    }
+            }
+        });
+    }
+
+    function downloadRdp(stackname) {
+        var publicip = document.getElementById(stackname + '_pubip').innerHTML;
+        if ((publicip).length < 1) {
+            swal('Nope!', "Wait until a public IP is available.  Click 'Refresh Labs' to see if one's ready.", 'error')
+            return;
+        }
+        var element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent('full address:s:' + publicip + '\n' +
+            'username:s:.\\LabAdmin\n' +
+            'drivestoredirect:s:*\n' +
+            'keyboardhook:i:1\n' +
+            'use multimon:i:0\n' +
+            'screen mode id:i:1\n' +
+            'desktopwidth:i:1366\n' +
+            'desktopheight:i:768'));
+        element.setAttribute('download', stackname + '.rdp');
+
+        element.style.display = 'none';
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element)
+    }
+
+    function updatelabstatus() {
+         $.post('/updatelabstatus');
+    }
+
+    function setips() {
+         $.post('/setips');
+    }
+
+    function fullrefresh() {
+        swal('Refreshing Labs...')
+        swal.showLoading()
+        updatelabstatus()
+        setips()
+        sleep = setTimeout(function() {
+            location.reload()
+        }, 3000);
+
+    }
+    // --------------------------------------------- COUNTDOWN TIMERS -------------------------------------------------------
+    // Flask Tasks
+    {% for item in my_list %}
+        {% if item['Active'] == 1 %}
+
+    function remainingTime_{{ item['StackName']}}() {
+        var endtime = moment.utc("{{ item['EndTime']}}");
+        var timenow = moment.utc();
+        var difference = (endtime - timenow) / 1000;
+
+        var h = Math.floor(difference / 3600);
+        var m = Math.floor(difference % 3600 / 60);
+        var s = Math.floor(difference % 3600 % 60);
+        var hour = ('0' + h).slice(-2);
+        var min = ('0' + m).slice(-2);
+        var sec = ('0' + s).slice(-2);
+
+        document.getElementById('{{ item['StackName']}}_countdown').innerHTML = hour + ":" + min + ":" + sec;
+
+        if (h < 0) {
+            document.getElementById('{{ item['StackName']}}_countdown').innerHTML = "Deleting... Try Refreshing!";
+        }
+
+        // Sleep for 1 second
+        sleep = setTimeout(function() {
+        remainingTime_{{ item['StackName']}}()
+        }, 1000);
+    }
+
+    remainingTime_{{ item['StackName']}}();
+
+    function progressStatus_{{ item['StackName']}}() {
+        var st = Date.parse("{{ item['StartTime']}}");
+        var starttime = new Date(st);
+        var timenow = new Date();
+        var timezoneoffset = timenow.getTimezoneOffset();
+
+        var predif = (timenow.getTime() - starttime.getTime()) / 1000;
+        var dif = predif + (timezoneoffset * 60);
+
+        if (dif > 480) {
+            $("#{{ item['StackName']}}_bar").css("width", "100%");
+        } else {
+            var progress = dif / 4.8;
+            $("#{{ item['StackName']}}_bar").css("width", progress + "%");
+            // Sleep for 2 second
+            sleep = setTimeout(function() {
+                progressStatus_{{ item['StackName']}}()
+            }, 1000);
+        }
+    }
+    progressStatus_{{ item['StackName']}}()
+        {% endif %}
+    {% endfor %}
+    // End Flask Tasks
+</script>
+{% endblock %}

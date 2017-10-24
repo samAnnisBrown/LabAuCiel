@@ -1,0 +1,74 @@
+{
+    "Regions": [
+        {
+            "RegionFriendlyName": "Asia-Pacific (Mumbai)",
+            "RegionShortName": "Mumbai",
+            "RegionName": "ap-south-1"
+        },
+        {
+            "RegionFriendlyName": "Asia-Pacific (Seoul)",
+            "RegionShortName": "Seoul",
+            "RegionName": "ap-northeast-2"
+        },
+        {
+            "RegionFriendlyName": "Asia-Pacific (Singapore)",
+            "RegionShortName": "Singapore",
+            "RegionName": "ap-southeast-1"
+        },
+        {
+            "RegionFriendlyName": "Asia-Pacific (Sydney)",
+            "RegionShortName": "Sydney",
+            "RegionName": "ap-southeast-2"
+        },
+        {
+            "RegionFriendlyName": "Asia-Pacific (Tokyo)",
+            "RegionShortName": "Tokyo",
+            "RegionName": "ap-northeast-1"
+        },
+        {
+            "RegionFriendlyName": "Canada (Montreal)",
+            "RegionShortName": "Montreal",
+            "RegionName": "ca-central-1"
+        },
+        {
+            "RegionFriendlyName": "EU (Frankfurt)",
+            "RegionShortName": "Frankfurt",
+            "RegionName": "eu-central-1"
+        },
+        {
+            "RegionFriendlyName": "EU (Ireland)",
+            "RegionShortName": "Ireland",
+            "RegionName": "eu-west-1"
+        },
+        {
+            "RegionFriendlyName": "EU (London)",
+            "RegionShortName": "London",
+            "RegionName": "eu-west-2"
+        },
+        {
+            "RegionFriendlyName": "South America (Sao Paulo)",
+            "RegionShortName": "Sao Paulo",
+            "RegionName": "sa-east-1"
+        },
+        {
+            "RegionFriendlyName": "US East (N. Virginia)",
+            "RegionShortName": "N. Virginia",
+            "RegionName": "us-east-1"
+        },
+        {
+            "RegionFriendlyName": "US East (Ohio)",
+            "RegionShortName": "Ohio",
+            "RegionName": "us-east-2"
+        },
+        {
+            "RegionFriendlyName": "US West (N. California)",
+            "RegionShortName": "N. California",
+            "RegionName": "us-west-1"
+        },
+        {
+            "RegionFriendlyName": "US West (Oregon)",
+            "RegionShortName": "Oregon",
+            "RegionName": "us-west-2"
+        }
+    ]
+}

@@ -1,0 +1,203 @@
+{% extends "root.html" %}
+{% block content %}
+<div class="form-group" style="width:50%; display: block; margin-left: auto; margin-right: auto">
+
+    <!-- AWS Configuration Panel -->
+
+    <div class="panel panel-default" style="width:98%; display: block; margin-left: auto; margin-right: auto">
+        <div class="panel-heading" style="display: flex; justify-content: center; position: relative">
+            <h3 class="panel-title" style="font-weight: bold">AWS Access Details</h3>
+        </div>
+        <div class="panel-body" style="background-color: whitesmoke">
+            <label>Update AWS Access Key ID:</label>
+	        <input type="password" id="key" name="password" class="form-control" data-toggle="password">
+            <br>
+            <label>Update AWS Secret Access Key:</label>
+	        <input type="password" id="secretkey" name="password" class="form-control" data-toggle="password">
+            <br>
+            <button type="button" class="btn btn-primary" onclick="updateCreds()">Save Credentials</button>
+            <button type="button" class="btn btn-default" onclick="testAwsConnection()">Test Connection</button>
+        </div>
+    </div>
+
+    {% if initialised == 0 %}
+    <!-- Default DB Configuration Panel -->
+
+    <div class="panel panel-default" style="width:98%; display: block; margin-left: auto; margin-right: auto">
+        <div class="panel-heading" style="display: flex; justify-content: center; position: relative">
+            <h3 class="panel-title" style="font-weight: bold">Default Location (For DynamoDB and S3 Files)</h3>
+        </div>
+        <div class="panel-body" style="background-color: whitesmoke">
+
+         <select name="region" id='default_region' class="form-control">
+                <option value='ap-south-1'>Asia-Pacific (Mumbai)</option>
+                <option value='ap-northeast-2'>Asia-Pacific (Seoul)</option>
+                <option value='ap-southeast-1'>Asia-Pacific (Singapore)</option>
+                <option value='ap-southeast-2'>Asia-Pacific (Sydney)</option>
+                <option value='ap-northeast-1'>Asia-Pacific (Tokyo)</option>
+                <option value='ca-central-1' id="1">Canada (Montreal)</option>
+                <option value='eu-central-1'>EU (Frankfurt)</option>
+                <option value='eu-west-1'>EU (Ireland)</option>
+                <option value='eu-west-2'>EU (London)</option>
+                <option value='sa-east-1'>South America (S&atilde;o Paulo)</option>
+                <option value='us-east-1'>US East (N. Virginia)</option>
+                <option value='us-east-2'>US East (Ohio)</option>
+                <option value='us-west-1'>US West (N. California)</option>
+                <option value='us-west-2'>US West (Oregon)</option>
+            </select>
+            <br>
+            <button type="button" class="btn btn-danger" onclick="updateDefaultRegion()">Set Default Region</button>
+            <br><br>
+            <span>This will be the default region in which DynamoDB and S3 Automation Scripts are stored.  It can only be set once.  The default region is currently set to <b>{{ default_region }}</b>.  This is an initial configuration item and will only appear if the DB and S3 files have not already been created.</span>
+        </div>
+    </div>
+
+
+    <!-- Intitial Configuration Panel -->
+
+    <div class="panel panel-default" style="width:98%; display: block; margin-left: auto; margin-right: auto">
+        <div class="panel-heading" style="display: flex; justify-content: center; position: relative">
+            <h3 class="panel-title" style="font-weight: bold">DynamoDB and S3 Initial Configuration</h3>
+        </div>
+        <div class="panel-body" style="background-color: whitesmoke">
+            <label>S3 Bucket Name</label>
+            <input class="form-control" id="bucketname" />
+            <br>
+            <p>The S3 bucket name has to be unique in the entire region's namespace.</p>
+            <button type="button" class="btn btn-primary" onclick="initialConfig()">Initialise Configuration</button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if initialised == 1 %}
+    <!-- Force S3 Update Panel -->
+
+    <div class="panel panel-default" style="width:98%; display: block; margin-left: auto; margin-right: auto">
+        <div class="panel-heading" style="display: flex; justify-content: center; position: relative">
+            <h3 class="panel-title" style="font-weight: bold">S3 Update</h3>
+        </div>
+        <div class="panel-body" style="background-color: whitesmoke">
+            <p>You can force a refresh of the S3 PowerShell Automation scripts here.  Needs to be done if you've updated the local scripts in some way, since new instances pull the scripts from their S3 home.</p>
+            <button type="button" class="btn btn-primary" onclick="copyToS3()">Force Update of S3 Files</button>
+        </div>
+    </div>
+
+    <!-- Force Price Update Panel -->
+    <div class="panel panel-default" style="width:98%; display: block; margin-left: auto; margin-right: auto">
+        <div class="panel-heading" style="display: flex; justify-content: center; position: relative">
+            <h3 class="panel-title" style="font-weight: bold">Pricing Update</h3>
+        </div>
+        <div class="panel-body" style="background-color: whitesmoke">
+            <p>AWS has an "API" for getting EC2 prices.  By API, they mean files that are downloadable and can be referenced for pricing information (calling it an API is generous!).  This means that the files will eventually become out-of-date, since they're a static view of pricing at the time of initial download.  You can force an update of the files used for price calculations here.  The download is about 120MB for all regions, so depending on your connection, may take a few minutes.  Be patient.</p>
+            <button type="button" class="btn btn-primary" onclick="updatePrices()">Update Price Files</button>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+    function updateCreds() {
+        var key = document.getElementById('key').value;
+        var secretkey = document.getElementById('secretkey').value;
+
+        if (key.length === 0) {
+           swal("Whoops!", "AWS Access Key cannot be empty.", "warning")
+           return;
+        }
+        if (secretkey.length === 0) {
+           swal("Whoops!", "AWS Secret Access Key cannot be empty.", "warning")
+           return;
+        }
+
+        $.post('/updatecreds', {
+            key: key,
+            secretkey: secretkey
+        });
+        swal("Done!", "Credentials Saved.  Trying testing the connection.", "success").then(function () {
+            location.reload();
+        })
+    }
+
+    function testAwsConnection() {
+        $.ajax({
+            type: "GET",
+            url: '/testconnection',
+            success: function(response) {
+                if (response['result'][1] === 1) {
+                    swal("Nice!", "Connected to AWS.  Your keys work!", "success")
+                } else if (response['result'][1] === 0) {
+                    swal("Whoops!", "AWS Connection Failed.  Check Your Keys.", "error")
+                }
+            }
+        });
+    }
+
+    function updateDefaultRegion() {
+        var defaultRegionInput = document.getElementById("default_region").value;
+        $.ajax({
+            type: "GET",
+            data: {"defaultregion": defaultRegionInput},
+            url: '/updatedefaultregion',
+            success: function(response) {
+                if (response['result'] === 1) {
+                    swal("Woohoo!", "Default region updated successfully.", "success").then(function () {
+                        location.reload()
+                    })
+                };
+            }
+        });
+    }
+    
+    function initialConfig() {
+        swal('Please wait')
+        swal.showLoading()
+        var s3bucket = document.getElementById('bucketname').value;
+        if (s3bucket.length < 1) {
+            swal("Hmm!", "You might want to enter an S3 Bucket Name.", "warning")
+            return
+        }
+        $.ajax({
+            type: "GET",
+            data: {"s3bucket": s3bucket},
+            url: '/initialConfig',
+            success: function(response) {
+                if (response['result'][1] === 0) {
+                    swal("Oops!", response['result'][0], "error")
+                } else {
+                    swal("Yay!", "Configuration completed.  If you check DynamoDB in {{ default_region }} you should find a LabAuCiel table.  S3 should have a bucket called " + s3bucket + " as well, with a couple of PowerShell files in it :)", "success").then(function () {
+                        location.reload()
+                    })
+                }
+
+            }
+        });
+    }
+    
+    function copyToS3() {
+        swal('Please wait')
+        swal.showLoading()
+        $.ajax({
+            type: "GET",
+            url: '/copytos3',
+            success: function(response) {
+                swal("Done!", response['result'][0], "success")
+            }
+        });
+    }
+
+    function updatePrices() {
+        swal('Downloading latest price files...', "This could take a few minutes and is about 120MB in size.  Sorry for no progress bar, but please be patient.")
+        swal.showLoading()
+        $.ajax({
+            type: "GET",
+            url: '/updatePrices',
+            success: function() {
+                swal("Done!", "Download complete.", "success")
+            }
+        });
+
+
+    }
+</script>
+{% endblock %}

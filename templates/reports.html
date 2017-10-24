@@ -1,0 +1,233 @@
+{% extends "root.html" %}
+{% block content %}
+<script src="static/js/Chart.js"></script>
+<script src="static/js/Chart.min.js"></script>
+<div style="width:95%; display: block; margin-left: auto; margin-right: auto">
+    <h4>Reports show data across all labs in the DB.  You'll need a couple of days of data before things get interesting!</h4>
+    <div class="panel-heading" style="display: flex; justify-content: center; position: relative">
+        <canvas id="costChart" style="width: 60%; height: 300px"></canvas>
+        <canvas id="costDonut" style="width: 40%; height: 300px"></canvas>
+    </div>
+    <div class="panel-heading" style="display: flex; justify-content: center; position: relative">
+        <canvas id="regionChart" style="width: 100%; height: 300px"></canvas>
+    </div>
+        <div class="panel-heading" style="display: flex; justify-content: center; position: relative">
+        <canvas id="instanceChart" style="width: 100%; height: 300px"></canvas>
+    </div>
+</div>
+
+<script>
+// --------------------------------------------- Region Report --------------------------------------------------------------
+function costChart() {
+    var ctx = document.getElementById("costChart").getContext('2d');
+    var costChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ report_data[2] | safe }},
+            datasets: [{
+                label: 'Spent',
+                data: {{ report_data[3] | safe }},
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.2)',
+                ],
+                borderColor: [
+                    'rgba(75, 192, 192, 0.2)',
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: false,
+            legend: {
+                display: false
+            },
+            title: {
+                display: true,
+                text: 'Daily Spending'
+            },
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero:true
+                    },
+                scaleLabel: {
+                    display: true,
+                    labelString: 'Daily Spend in USD'
+                }
+                }]
+            }
+        }
+    });
+}
+
+function costDonut() {
+    var ctx = document.getElementById("costDonut").getContext('2d');
+    var costDonut = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: {{ report_data[4] | safe }},
+        datasets: [{
+          backgroundColor: [
+            "#2ecc71",
+            "#3498db",
+            "#95a5a6",
+            "#9b59b6",
+            "#f1c40f",
+            "#e74c3c",
+            "#34495e",
+            "#160451",
+            "#DBBD7C",
+            "#E722EC",
+            "#20691C",
+            "#D37308",
+            "#6C1243",
+            "#D4FD97"
+
+          ],
+          data: {{ report_data[5] | safe }}
+        }]
+      },
+      options: {
+        responsive: false,
+        title: {
+            display: true,
+            fontSize: 20,
+            text: 'Total Global Spend: ${{ report_data[8] | safe }} USD'
+        },
+        legend: {
+            display: false
+        },
+      }
+    });
+
+}
+
+function regionChart() {
+    var ctx = document.getElementById("regionChart").getContext('2d');
+    var regionChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ report_data[0] | safe }},
+        datasets: [{
+            data: {{ report_data[1] | safe }},
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)',
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)',
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)'
+            ],
+            borderColor: [
+                'rgba(255,99,132,1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(255,99,132,1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: false,
+        legend: {
+            display: false
+        },
+        title: {
+            display: true,
+            text: 'Labs Launched in Each Region'
+        },
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero:true
+                }
+            }]
+        }
+    }
+    });
+}
+
+function instanceChart() {
+    var ctx = document.getElementById("instanceChart").getContext('2d');
+    var instanceChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ report_data[6] | safe }},
+        datasets: [{
+            label: 'Number of Each Instance Type Used',
+            data: {{ report_data[7] | safe }},
+            backgroundColor: [
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)',
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)',
+                'rgba(255, 99, 132, 0.2)'
+            ],
+            borderColor: [
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(255,99,132,1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(255,99,132,1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: false,
+        legend: {
+            display: false
+        },
+        title: {
+            display: true,
+            text: 'Instance Types Launched'
+        },
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero:true
+                }
+            }]
+        }
+    }
+    });
+}
+costDonut();
+costChart();
+regionChart();
+instanceChart();
+
+</script>
+{% endblock %}

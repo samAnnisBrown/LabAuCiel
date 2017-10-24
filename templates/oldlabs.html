@@ -1,0 +1,58 @@
+{% extends "root.html" %}
+{% block content %}
+<div style="width:95%; display: block; margin-left: auto; margin-right: auto">
+    <table>
+        <tbody>
+        <tr>
+            <td style="vertical-align: middle;"><h3 style="color: dimgray">Deleted Labs</h3></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+<div style="width:95%; display: block; margin-left: auto; margin-right: auto">
+  <table class="table" style="text-align:center;">
+    <thead>
+      <tr>
+        <th style="text-align:center; color: dimgray">Lab Name</th>
+        <th style="text-align:center; color: dimgray">Region</th>
+        <th style="text-align:center; color: dimgray">Instance Size</th>
+        <th style="text-align:center; color: dimgray">Key Pair</th>
+        <th style="text-align:center; color: dimgray">Public IP</th>
+        <th style="text-align:center; color: dimgray">Estimated Cost</th>
+        <th style="text-align:center; color: dimgray">Start Time</th>
+        <th style="text-align:center; color: dimgray">Status</th>
+        <th style="text-align:center; color: dimgray">Remove Entry</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in my_list %}
+        {% if (item['Active'] == '0') or (item['Active'] == 0) %}
+        <tr>
+        <td style="vertical-align: middle; color:dimgrey">{{ item['StackName'] }}</td>
+        <td style="vertical-align: middle; color:dimgrey">{{ item['FriendlyRegion'] }}</td>
+        <td style="vertical-align: middle; color:dimgrey">{{ item['InstanceSize'] }}</td>
+        <td style="vertical-align: middle; color:dimgrey">{{ item['Keypair'] }}</td>
+        <td style="vertical-align: middle; color:dimgrey">{{ item['PublicIP'] }}</td>
+        <td style="vertical-align: middle; color:dimgrey; font-weight: bold">{{ item['Cost'] }}</td>
+        <td style="vertical-align: middle; color:dimgrey">{{ item['StartTime'] }}</td>
+        <td style="vertical-align: middle;"><span class="label label-info" style="margin-top: 0px">Deleted</span></td>
+        <td style="vertical-align: middle;"><button type="button" class="btn btn-xs btn-default" onclick="removeEntry('{{ item['ID']}}')">Remove</button></td>
+        </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<script>
+    function removeEntry(stackid) {
+        $.ajax({
+            type: "GET",
+            data: {'stackid':stackid},
+            url: '/deletedbentry',
+            success: function() {
+                location.reload();
+            }
+        });
+    }
+</script>
+{% endblock %}

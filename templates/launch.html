@@ -1,0 +1,276 @@
+{% include "root.html" %}
+<div class="panel panel-default" style="width:98%; display: block; margin-left: auto; margin-right: auto">
+    <div class="panel-heading" style="display: flex; justify-content: center; position: relative">
+        <h3 class="panel-title" style="font-weight: bold">Windows 2016 Lab Launch</h3>
+    </div>
+    <div class="panel-body" style="background-color: whitesmoke">
+        <table class="table" style="text-align:center;">
+            <thead class="thead-inverse">
+                <tr>
+                    <th style="text-align:center;">Region</th>
+                    <th style="text-align:center;">Instance Size <button type="button" class="btn btn-xs btn-default" onclick="getCheapestRegion()">Find Cheapest Region</button></th>
+                    <th style="text-align:center;">Key Pair</th>
+                    <th style="text-align:center;">Lab Name</th>
+                    <th style="text-align:center;">Logon Password</th>
+                    <th style="text-align:center;">Runtime</th>
+                    <th style="text-align:center;"># of Labs</th>
+                    <th style="text-align:center;">Compute Cost</th>
+                    <th style="text-align:center;">Launch</th>
+                </tr>
+            </thead>
+        <tbody>
+            <tr>
+                <td style="vertical-align: middle;">
+                    <select name="region" id='region' class="form-control" onchange="regionChange()">
+                    <option value='ap-south-1'>Asia-Pacific (Mumbai)</option>
+                    <option value='ap-northeast-2'>Asia-Pacific (Seoul)</option>
+                    <option value='ap-southeast-1'>Asia-Pacific (Singapore)</option>
+                    <option value='ap-southeast-2' selected>Asia-Pacific (Sydney)</option>
+                    <option value='ap-northeast-1'>Asia-Pacific (Tokyo)</option>
+                    <option value='ca-central-1'>Canada (Montreal)</option>
+                    <option value='eu-central-1'>EU (Frankfurt)</option>
+                    <option value='eu-west-1'>EU (Ireland)</option>
+                    <option value='eu-west-2'>EU (London)</option>
+                    <option value='sa-east-1'>South America (S&atilde;o Paulo)</option>
+                    <option value='us-east-1'>US East (N. Virginia)</option>
+                    <option value='us-east-2'>US East (Ohio)</option>
+                    <option value='us-west-1'>US West (N. California)</option>
+                    <option value='us-west-2'>US West (Oregon)</option>
+                    </select>
+                </td>
+                <td style="vertical-align: middle;">
+                    <select name="instance" id="instance" class="form-control" onchange="calcCost()">
+                        <option disabled>----- General Instances -----</option>
+                        <option value='t2.nano'>t2.nano (1vCPU, 0.5GB)</option>
+                        <option value='t2.micro'>t2.micro (1vCPU, 1GB)</option>
+                        <option value='t2.small' selected>t2.small (1vCPU, 2GB)</option>
+                        <option value='t2.medium'>t2.medium (2vCPU, 4GB)</option>
+                        <option value='t2.large'>t2.large (2vCPU, 8GB)</option>
+                        <option value='t2.xlarge'>t2.xlarge (4vCPU, 16GB)</option>
+                        <option value='t2.2xlarge'>t2.2xlarge (8vCPU, 32GB)</option>
+                        <option disabled>----- Compute Instances -----</option>
+                        <option value='c4.large'>c4.large (2vCPU, 3.75GB)</option>
+                        <option value='c4.xlarge'>c4.xlarge (4vCPU, 7.5GB)</option>
+                        <option value='c4.2xlarge'>c4.2xlarge (8vCPU, 15GB)</option>
+                        <option value='c4.4xlarge'>c4.4xlarge (16vCPU, 30GB)</option>
+                        <option value='c4.8xlarge'>c4.8xlarge (36vCPU, 60GB)</option>
+                        <option disabled>----- Memory Instances -----</option>
+                        <option value='r4.large'>r4.large(2vCPU, 15.25GB)</option>
+                        <option value='r4.xlarge'>r4.xlarge(4vCPU, 30.5GB)</option>
+                        <option value='r4.2xlarge'>r4.2xlarge(8vCPU, 61GB)</option>
+                        <option value='r4.4xlarge'>r4.4xlarge(16vCPU, 122GB)</option>
+                        <option value='r4.8xlarge'>r4.8xlarge(32vCPU, 244GB)</option>
+                        <option value='r4.16xlarge'>r4.16xlarge(64vCPU, 488GB)</option>
+                    </select>
+
+                </td>
+                <td style="vertical-align: middle;">
+                    <select name="keypair" id="keypair" class="form-control">
+                        <option value="">New 'LabAuCiel' Key</option>
+                    </select>
+                </td>
+                <td style="vertical-align: middle;">
+                    <input class="form-control" id="stackname">
+                </td>
+                <td style="vertical-align: middle;">
+                    <input type="password" class="form-control" id="passwrd">
+                </td>
+                <td style="vertical-align: middle;">
+                    <select name="runtime" id="ttl" class="form-control" onchange="calcCost()">
+                        <option value='15'>15 mins</option>
+                        <option value='30'>30 mins</option>
+                        <option value='60'>1 hour</option>
+                        <option value='240'>4 Hours</option>
+                        <option value='720'>12 Hours</option>
+                        <option value='1440'>1 Day</option>
+                        <option value='10080'>1 Week</option>
+                        <option value='43800'>1 Month</option>
+                    </select>
+                </td>
+                <td style="vertical-align: middle;">
+                    <select name="labno" id='labno' class="form-control" onchange="calcCost()">
+                    <option value='1'>1</option>
+                    <option value='2'>2</option>
+                    <option value='3'>3</option>
+                    <option value='4'>4</option>
+                    <option value='5'>5</option>
+                    </select>
+                </td>
+                <td style="vertical-align: middle;"><span id="cost" style="color: dimgray; font-weight: bold">$0.01</span></td>
+                <td><button type="button" class="btn btn-primary" onclick="launchInstance()">Launch</button></td>
+            </tr>
+        </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function launchInstance() {
+       var stackInput = document.getElementById('stackname').value;
+       var regionInput = document.getElementById('region').value;
+       var instanceInput = document.getElementById('instance').value;
+       var keypairInput = document.getElementById('keypair').value;
+       var passwordInput = document.getElementById('passwrd').value;
+       var ttlInput = document.getElementById('ttl').value;
+       var costInput = document.getElementById('cost').innerHTML;
+       var labnoInput = document.getElementById('labno').value;
+       costInput = costInput.substring(1);
+
+       if (stackInput.length === 0) {
+           swal("Whoops!", "Lab Name cannot be empty.  Please enter something.", "warning")
+           return;
+       }
+       if (passwordInput.length === 0) {
+           swal("Whoops!", "Logon Password cannot be empty.  Please enter something.", "warning")
+           return;
+       }
+
+       if (keypairInput === 'LabAuCiel_Key_New') {
+            createKey();
+            keypairInput = 'LabAuCiel_Key';
+       }
+      swal({
+          title: 'Ready to Launch ' + labnoInput + ' Lab(s)?' ,
+          text: 'It\'ll take a few seconds to trigger the launch, and about 8 minutes for the lab(s) to become available.',
+          type: 'info',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#b9b5ba',
+          confirmButtonText: 'Launch Lab!',
+          showLoaderOnConfirm: true,
+          preConfirm: function () {
+            return new Promise(function (resolve, reject) {
+              setTimeout(function() {
+                $.ajax({
+                type: "GET",
+                url: '/cfcreate',
+                data: {'stackname': stackInput,
+                    'region': regionInput,
+                    'instance': instanceInput,
+                    'keypair': keypairInput,
+                    'userpassword': passwordInput,
+                    'ttl': ttlInput,
+                    'cost': costInput / labnoInput,
+                    'labno': labnoInput
+                },
+                success: function(response){
+                    if (response['response'] !== "Success") {
+                        swal("Oops!", response['response'], "warning").then(function () {
+                            reject()
+                            })
+                    } else {
+                        resolve()
+                    }
+                 }
+                });
+              }, 2000)
+            })
+          },
+        }).then(function () {
+            swal(
+                'Launched!',
+                'Lab(s) successfully launched.',
+                'success'
+               ).then(function () {
+                  location.reload();
+              })
+        })
+    }
+
+    function regionChange() {
+        calcCost();
+        getKeypairs();
+    }
+
+    function getCheapestRegion() {
+        swal('Saving money...')
+        swal.showLoading()
+        var instanceInput = document.getElementById('instance').value;
+        var regionString = ""
+        $.ajax({
+            type: "GET",
+            url: '/cheapestregion',
+            data: { 'instance':instanceInput },
+            success: function(response){
+                if (response['result'].length > 1) {
+                    for (i = 0 ; i < response['result'].length ; i++) {
+                        if (i === 0) {
+                            regionString = response['result'][i]
+                        } else if (i === response['result'].length - 1) {
+                            regionString = regionString + ", and " + response['result'][i]
+                        } else {
+                            regionString = regionString + ", " + response['result'][i]
+                        }
+                    }
+                    regionString = "The cheapest regions to launch a " + instanceInput + " instance are " + regionString + "."
+                } else {
+                    regionString = "The cheapest region to launch a " + instanceInput + " instance is " + response['result'][i] + "."
+                }
+                swal("", regionString)
+            }
+        });
+    }
+
+    function calcCost() {
+        var instanceInput = document.getElementById('instance').value;
+        var regionInput = document.getElementById('region').value;
+        var ttlInput = document.getElementById('ttl').value;
+        var labnoInput = document.getElementById('labno').value;
+
+        $.ajax({
+            type: "GET",
+            url: '/ec2price',
+            data: {'instancesize':instanceInput, 'region':regionInput, 'ttl':ttlInput, 'labno': labnoInput },
+            success: function(response){
+                document.getElementById('cost').innerHTML = '$' + response['cost'];
+
+            }
+        });
+    }
+
+    function createKey() {
+        var regionInput = document.getElementById('region').value;
+
+        $.ajax({
+            type: "GET",
+            data: {'region':regionInput},
+            url: '/createkey',
+            success: function(response){
+                var element = document.createElement('a');
+                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(response['key']));
+                element.setAttribute('download', regionInput + '_LabAuCiel.pem');
+
+                element.style.display = 'none';
+                document.body.appendChild(element);
+                element.click();
+                document.body.removeChild(element)
+            }
+        });
+    }
+
+    function getKeypairs(){
+        var regionInput = document.getElementById('region').value;
+
+        $.ajax({
+           type: "GET",
+           url: '/keypairs',
+           data: {'region':regionInput},
+           success: function(response){
+               var data = response['keypairs'];
+               var lab_key_exists = false;
+               var $select = $('#keypair');
+               $select.find('option').remove();
+               $.each(data,function(i) {
+                   var outvalue = data[i].KeyName
+                   $select.append('<option value=' + outvalue + '>' + outvalue + '</option>');
+                   if (outvalue === 'LabAuCiel_Key') {lab_key_exists = true;}
+               });
+               if (lab_key_exists === false) {
+                    $select.append('<option value="LabAuCiel_Key_New" style="font-style: italic">New \'LabAuCiel\' Key</option>');
+               }
+           }
+        });
+    }
+    $(document).ready(getKeypairs(), calcCost());
+</script>
+{% block content %}{% endblock %}

@@ -1,0 +1,210 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "LabAuCiel",
+
+  "Parameters" : {
+    "InstanceSize" : {
+      "Type" : "String",
+      "Default" : "t2.micro", 
+      "Description" : "Enter the instance size."
+    },
+    "KeyPair" : {
+      "Type" : "String",
+      "Description" : "Name of the keypair to use."
+    },
+    "TagName" : {
+      "Type" : "String",
+      "Description" : "Name of the Stack for additional tags."
+    },
+    "AmiId" : {
+      "Type" : "String",
+      "Description" : "AMI ID for the instance being created."
+    },
+    "UserPassword" : {
+      "Type" : "String",
+      "Description" : "Password set by user - be warned this will be visible in the CloudFormation console and the instance's UserData.  Use a secure but temporary password for lab environments."
+    },
+    "TTL" : {
+      "Type" : "String",
+      "Description" : "Time To Live, in UTC."
+    }
+  },
+
+  "Mappings" : {},
+
+  "Resources" : {
+
+    "VPC" : {
+      "Type" : "AWS::EC2::VPC",
+      "DependsOn" : "RolePolicies",
+      "Properties" : {
+        "CidrBlock" : "10.0.0.0/16",
+        "Tags" : [ {"Key" : "Name", "Value" : { "Ref" : "TagName" } } ]
+      }
+    },
+
+    "Subnet" : {
+      "Type" : "AWS::EC2::Subnet",
+      "DependsOn" : "RolePolicies",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+        "CidrBlock" : "10.0.0.0/24",
+        "Tags" : [ {"Key" : "Name", "Value" : { "Ref" : "TagName" } } ]
+      }
+    },
+
+    "InternetGateway" : {
+      "Type" : "AWS::EC2::InternetGateway",
+      "DependsOn" : "RolePolicies",
+      "Properties" : {
+        "Tags" : [ {"Key" : "Name", "Value" : { "Ref" : "TagName" } } ]
+      }
+    },
+
+    "AttachGateway" : {
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+      "DependsOn" : "RolePolicies",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+        "InternetGatewayId" : { "Ref" : "InternetGateway" }
+      }
+    },
+
+    "RouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "DependsOn" : "RolePolicies",
+      "Properties" : {
+        "VpcId" : {"Ref" : "VPC"},
+        "Tags" : [ {"Key" : "Name", "Value" : { "Ref" : "TagName" } } ]
+      }
+    },
+
+    "Route" : {
+      "Type" : "AWS::EC2::Route",
+      "DependsOn" : [ "AttachGateway", "RolePolicies" ],
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "RouteTable" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : { "Ref" : "InternetGateway" }
+      }
+    },
+
+    "SubnetRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "DependsOn" : "RolePolicies",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "Subnet" },
+        "RouteTableId" : { "Ref" : "RouteTable" }
+      }
+    },
+
+    "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "DependsOn" : "RolePolicies",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+        "GroupDescription" : "Enable RDP access via port 3389",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "3389", "ToPort" : "3389", "CidrIp" : "0.0.0.0/0" }
+        ]
+      }
+    },
+
+    "RootRole": {
+         "Type": "AWS::IAM::Role",
+         "Properties": {
+            "AssumeRolePolicyDocument": {
+               "Version" : "2012-10-17",
+               "Statement": [ {
+                  "Effect": "Allow",
+                  "Principal": {
+                     "Service": [ "ec2.amazonaws.com" ]
+                  },
+                  "Action": [ "sts:AssumeRole" ]
+               } ]
+            },
+            "Path": "/"
+         }
+      },
+
+      "RolePolicies": {
+         "Type": "AWS::IAM::Policy",
+         "Properties": {
+            "PolicyName": "root",
+            "PolicyDocument": {
+               "Version" : "2012-10-17",
+               "Statement": [ {
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudformation:DeleteStack",
+                    "s3:GetObject",
+                    "s3:GetObjectTagging",
+                    "s3:ListBucket",
+                    "ec2:DescribeTags",
+                    "ec2:DeleteRoute",
+                    "ec2:TerminateInstances",
+                    "ec2:DisassociateRouteTable",
+                    "iam:RemoveRoleFromInstanceProfile",
+                    "ec2:DetachInternetGateway",
+                    "ec2:DeleteSecurityGroup",
+                    "ec2:DeleteSubnet",
+                    "ec2:DeleteRouteTable",
+                    "ec2:DeleteVpc",
+                    "ec2:DeleteInternetGateway",
+                    "iam:DeleteRolePolicy",
+                    "iam:DeleteRole",
+                    "iam:DeleteInstanceProfile",
+                    "ec2:DescribeInternetGatewaysResult",
+                    "ec2:DescribeInternetGateways",
+                    "ec2:DescribeInstances",
+                    "ec2:DescribeRouteTables",
+                    "ec2:DescribeSubnets",
+                    "ec2:DescribeVpcs"
+                  ],
+                  "Resource": "*"
+               } ]
+            },
+            "Roles": [ { "Ref": "RootRole" } ]
+         }
+      },
+
+      "RootInstanceProfile": {
+         "Type": "AWS::IAM::InstanceProfile",
+         "DependsOn" : "RolePolicies",
+         "Properties": {
+            "Path": "/",
+            "Roles": [ { "Ref": "RootRole" } ]
+         }
+      },
+
+    "LabInstance" : {
+      "Type" : "AWS::EC2::Instance",
+      "DependsOn" : [ "AttachGateway", "RolePolicies" ],
+      "Properties" : {
+        "ImageId" : { "Ref" : "AmiId" },
+        "InstanceType" : { "Ref" : "InstanceSize" },
+        "IamInstanceProfile" : { "Ref" : "RootInstanceProfile" },
+        "KeyName" : { "Ref" : "KeyPair" },
+        "Tags" : [
+          {"Key" : "Name", "Value" : { "Ref" : "TagName" } },
+          {"Key" : { "Fn::Join" : ["", [ { "Ref" : "TagName" }, "TTL" ] ] }, "Value" : { "Ref" : "TTL" } }
+        ],
+        "NetworkInterfaces" : [{
+          "AssociatePublicIpAddress" : "true",
+          "DeviceIndex" : "0",
+          "GroupSet" : [{ "Ref" : "InstanceSecurityGroup" }],
+          "SubnetId" : { "Ref" : "Subnet" }
+        }],
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+          "<powershell>\n",
+            "Copy-S3Object -Region s3_region -BucketName s3_bucket -Key LabAuCielPostBoot.ps1 -LocalFile C:\\LabAuCiel\\LabAuCielPostBoot.ps1\n",
+            "Copy-S3Object -Region s3_region -BucketName s3_bucket -Key LabAuCielDeleteStack.ps1 -LocalFile C:\\LabAuCiel\\LabAuCielDeleteStack.ps1\n",
+            "(Get-S3Object -Region s3_region -BucketName s3_bucket -KeyPrefix FileDrop).key | ForEach-Object { Copy-S3Object -Region s3_region -BucketName s3_bucket -Key $_ -LocalFile C:\\LabAuCiel\\\"$_\" }\n",
+            "C:\\LabAuCiel\\LabAuCielPostBoot.ps1 -Password ", { "Ref" : "UserPassword" }, " -StackName ", { "Ref" : "TagName" }, "\n",
+          "</powershell>"
+        ]]}}
+      }
+    }
+  }
+}
