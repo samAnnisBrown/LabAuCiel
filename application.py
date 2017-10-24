@@ -6,14 +6,14 @@ from core.ddb import scan_items, delete_item
 from core.reporting import *
 from core.config import get_region_friendlyname
 
-lab = Flask(__name__)
-lab.secret_key = "H3%GNalCn11B^Q2a9Lccgy*s0"
+application = Flask(__name__)
+application.secret_key = "H3%GNalCn11B^Q2a9Lccgy*s0"
 
 
 """ ----------------------------------------- Login ----------------------------------------- """
 
 
-@lab.route('/login', methods=['POST'])
+@application.route('/login', methods=['POST'])
 def login():
     if request.form['password'] == 'alphaquebec10' and request.form['username'] == 'labmin':
         session['logged_in'] = True
@@ -22,7 +22,7 @@ def login():
     return redirect('/')
 
 
-@lab.route("/logout")
+@application.route("/logout")
 def logout():
     session['logged_in'] = False
     return root()
@@ -31,7 +31,7 @@ def logout():
 """ ----------------------------------------- Pages ----------------------------------------- """
 
 
-@lab.route('/')
+@application.route('/')
 def root():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -42,7 +42,7 @@ def root():
             return redirect('/settings')
 
 
-@lab.route('/oldlabs')
+@application.route('/oldlabs')
 def oldlabs():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -53,7 +53,7 @@ def oldlabs():
             return redirect('/settings')
 
 
-@lab.route('/settings')
+@application.route('/settings')
 def settings():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -64,7 +64,7 @@ def settings():
                                )
 
 
-@lab.route('/reports')
+@application.route('/reports')
 def reports():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -75,7 +75,7 @@ def reports():
             return redirect('/settings')
 
 
-@lab.route('/theme')
+@application.route('/theme')
 def theme():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -86,7 +86,7 @@ def theme():
 """ ----------------------------------------- Triggers ----------------------------------------- """
 
 
-@lab.route('/cfcreate', methods=['GET', 'POST'])
+@application.route('/cfcreate', methods=['GET', 'POST'])
 def cfcreate():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -104,7 +104,7 @@ def cfcreate():
             )})
 
 
-@lab.route('/cfdelete', methods=['GET', 'POST'])
+@application.route('/cfdelete', methods=['GET', 'POST'])
 def cfdelete():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -119,7 +119,7 @@ def cfdelete():
             )})
 
 
-@lab.route('/addtime', methods=['GET', 'POST'])
+@application.route('/addtime', methods=['GET', 'POST'])
 def addtime():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -135,7 +135,7 @@ def addtime():
             )})
 
 
-@lab.route('/setips', methods=['POST'])
+@application.route('/setips', methods=['POST'])
 def setips():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -143,7 +143,7 @@ def setips():
         return update_running_lab_ips()
 
 
-@lab.route('/updatelabstatus', methods=['POST'])
+@application.route('/updatelabstatus', methods=['POST'])
 def updatelabstatus():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -151,7 +151,7 @@ def updatelabstatus():
         return update_global_lab_status()
 
 
-@lab.route('/createkey', methods=['GET', 'POST'])
+@application.route('/createkey', methods=['GET', 'POST'])
 def createkey():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -162,7 +162,7 @@ def createkey():
                 )})
 
 
-@lab.route('/ec2price', methods=['GET', 'POST'])
+@application.route('/ec2price', methods=['GET', 'POST'])
 def ec2price():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -177,7 +177,7 @@ def ec2price():
                 )})
 
 
-@lab.route('/keypairs', methods=['GET', 'POST'])
+@application.route('/keypairs', methods=['GET', 'POST'])
 def keypairs():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -187,7 +187,7 @@ def keypairs():
                 'keypairs': list_keypairs(request.args.get('region'))})
 
 
-@lab.route('/updatecreds', methods=['POST'])
+@application.route('/updatecreds', methods=['POST'])
 def updatecreds():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -196,7 +196,7 @@ def updatecreds():
         return "Done"
 
 
-@lab.route('/testconnection', methods=['GET', 'POST'])
+@application.route('/testconnection', methods=['GET', 'POST'])
 def testconnection():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -204,7 +204,7 @@ def testconnection():
         return jsonify({'result': test_aws_connection()})
 
 
-@lab.route('/deletedbentry', methods=['GET', 'POST'])
+@application.route('/deletedbentry', methods=['GET', 'POST'])
 def deletedbentry():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -212,7 +212,7 @@ def deletedbentry():
         return jsonify({'result': delete_item(request.args.get('stackid'))})
 
 
-@lab.route('/updatedefaultregion', methods=['GET', 'POST'])
+@application.route('/updatedefaultregion', methods=['GET', 'POST'])
 def updatedefaultregion():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -220,7 +220,7 @@ def updatedefaultregion():
         return jsonify({'result': update_config_item('default_region', str(request.args.get('defaultregion')))})
 
 
-@lab.route('/initialConfig', methods=['GET', 'POST'])
+@application.route('/initialConfig', methods=['GET', 'POST'])
 def initialConfig():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -228,7 +228,7 @@ def initialConfig():
         return jsonify({'result': initial_config(request.args.get('s3bucket'))})
 
 
-@lab.route('/copytos3', methods=['GET', 'POST'])
+@application.route('/copytos3', methods=['GET', 'POST'])
 def copytos3():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -236,7 +236,7 @@ def copytos3():
         return jsonify({'result': create_s3_documents()})
 
 
-@lab.route('/updatePrices', methods=['GET', 'POST'])
+@application.route('/updatePrices', methods=['GET', 'POST'])
 def updatePrices():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -244,7 +244,7 @@ def updatePrices():
         return jsonify({'result': get_ec2_pricelists()})
 
 
-@lab.route('/cheapestregion', methods=['GET', 'POST'])
+@application.route('/cheapestregion', methods=['GET', 'POST'])
 def cheapestregion():
     if not session.get('logged_in'):
         return render_template('login.html')
@@ -255,7 +255,7 @@ def cheapestregion():
 """ ----------------------------------------- Error Handling ----------------------------------------- """
 
 
-@lab.errorhandler(500)
+@application.errorhandler(500)
 def server_error(e):
     # Log the error and stacktrace.
     logging.exception('An error occurred during a request.')
@@ -265,5 +265,5 @@ def server_error(e):
 if __name__ == "__main__":
     # Setting debug to True enables debug output. This line should be
     # removed before deploying a production app.
-    lab.debug = True
-    lab.run()
+    application.debug = True
+    application.run()
