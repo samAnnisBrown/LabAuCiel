@@ -1,5 +1,5 @@
 aws_access_key_id:
 aws_secret_access_key:
 default_region: ap-southeast-2
-initialised: 0
-s3_bucket_name: labauciel
+initialised: 1
+s3_bucket_name: labauciel-live
