@@ -32,12 +32,12 @@ Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://cho
 
 # Utility Install
 choco install googlechrome -y -force
-choco install r.project -y -force
-choco install r.studio -y -force
 choco install notepadplusplus.install -y -force
 choco install 7zip.install -y -force
 choco install putty.install -y -force
-# choco install visualstudiocode -y -force
+choco install visualstudiocode -y -force
+# choco install r.project -y -force
+# choco install r.studio -y -force
 # choco install winscp -y -force
 
 Stop-Transcript
