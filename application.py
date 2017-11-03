@@ -1,7 +1,7 @@
-import logging
-
 from flask import Flask, render_template, request, jsonify, session, flash, redirect
 from werkzeug.contrib.fixers import ProxyFix
+import flask_login, logging
+
 
 from core.aws import *
 from core.ddb import scan_items, delete_item
@@ -9,9 +9,29 @@ from core.reporting import *
 from core.config import get_region_friendlyname
 
 application = Flask(__name__)
-""" Proxy fix so that x-forwarded-proto works for SSL redirect """
+
+# Proxy fix so that x-forwarded-proto works for SSL redirect
 application.wsgi_app = ProxyFix(application.wsgi_app)
+
+# Login Management
+login_manager = flask_login.LoginManager()
+login_manager.init_app(application)
 application.secret_key = "H3%GNalCn11B^Q2a9Lccgy*s0"
+users = {'labmin': {'password': 'secret'}}
+
+
+class User(flask_login.UserMixin):
+    pass
+
+
+@login_manager.user_loader
+def user_loader(email):
+    if email not in users:
+        return
+
+    user = User()
+    user.id = email
+    return user
 
 
 @application.before_request
@@ -26,243 +46,209 @@ def before_request():
 """ ----------------------------------------- Login ----------------------------------------- """
 
 
-@application.route('/login', methods=['POST'])
+@application.route('/')
+def root():
+    return render_template('login.html')
+
+
+@application.route('/login',  methods=['GET', 'POST'])
 def login():
-    if request.form['password'] == 'alphaquebec10' and request.form['username'] == 'labmin':
-        session['logged_in'] = True
-    else:
-        flash('wrong password!')
+    print(request.form['username'])
+    if request.form['username'] in users:
+        if request.form['password'] == users[request.form['username']]['password']:
+            user = User()
+            user.id = request.form['username']
+            flask_login.login_user(user)
+            return redirect('/launch')
     return redirect('/')
 
 
-@application.route("/logout")
+@application.route('/logout')
 def logout():
-    session['logged_in'] = False
-    return root()
+    flask_login.logout_user()
+    return redirect('/')
 
 
 """ ----------------------------------------- Pages ----------------------------------------- """
 
 
-@application.route('/')
-def root():
-    if not session.get('logged_in'):
-        return render_template('login.html')
+@application.route('/launch')
+@flask_login.login_required
+def launch():
+    if test_db_connection()[1] == 1:
+        return render_template('labs.html', my_list=scan_items(), activelabs=active_labs())
     else:
-        if test_db_connection()[1] == 1:
-            return render_template('labs.html', my_list=scan_items(), activelabs=active_labs())
-        else:
-            return redirect('/settings')
+        return redirect('/settings')
 
 
 @application.route('/oldlabs')
+@flask_login.login_required
 def oldlabs():
-    if not session.get('logged_in'):
-        return render_template('login.html')
+    if test_db_connection()[1] == 1:
+        return render_template('oldlabs.html', my_list=scan_items())
     else:
-        if test_db_connection()[1] == 1:
-            return render_template('oldlabs.html', my_list=scan_items())
-        else:
-            return redirect('/settings')
+        return redirect('/settings')
 
 
 @application.route('/settings')
+@flask_login.login_required
 def settings():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return render_template('settings.html',
-                               initialised=get_config_item('initialised'),
-                               default_region=get_region_friendlyname(get_config_item('default_region'))
-                               )
+    return render_template('settings.html',
+                           initialised=get_config_item('initialised'),
+                           default_region=get_region_friendlyname(get_config_item('default_region'))
+                           )
 
 
 @application.route('/reports')
+@flask_login.login_required
 def reports():
-    if not session.get('logged_in'):
-        return render_template('login.html')
+    if test_db_connection()[1] == 1:
+        return render_template('reports.html', report_data=report_all())
     else:
-        if test_db_connection()[1] == 1:
-            return render_template('reports.html', report_data=report_all())
-        else:
-            return redirect('/settings')
+        return redirect('/settings')
 
 
 @application.route('/theme')
+@flask_login.login_required
 def theme():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return render_template('theme.html')
+    return render_template('theme.html')
 
 
 """ ----------------------------------------- Triggers ----------------------------------------- """
 
 
 @application.route('/cfcreate', methods=['GET', 'POST'])
+@flask_login.login_required
 def cfcreate():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
+    return jsonify({
+        'response': create_cf_stack(
+            request.args.get('stackname'),
+            request.args.get('region'),
+            request.args.get('instance'),
+            request.args.get('keypair'),
+            request.args.get('userpassword'),
+            request.args.get('ttl'),
+            request.args.get('cost'),
+            request.args.get('labno')
+        )})
+
+
+@application.route('/cfdelete', methods=['GET', 'POST'])
+@flask_login.login_required
+def cfdelete():
+    return jsonify({
+        'response':    delete_cf_stack(
+            request.args.get('stackname'),
+            request.args.get('region'),
+            request.args.get('stackid'),
+            request.args.get('starttime'),
+            request.args.get('instancesize')
+        )})
+
+
+@application.route('/addtime', methods=['GET', 'POST'])
+@flask_login.login_required
+def addtime():
+    return jsonify({
+        'response': update_instance_endtime(
+            request.args.get('stackname'),
+            request.args.get('region'),
+            request.args.get('stackid'),
+            request.args.get('add_mins'),
+            request.args.get('instancesize'),
+            request.args.get('cost')
+        )})
+
+
+@application.route('/setips', methods=['POST'])
+@flask_login.login_required
+def setips():
+    return update_running_lab_ips()
+
+
+@application.route('/updatelabstatus', methods=['POST'])
+@flask_login.login_required
+def updatelabstatus():
+    return update_global_lab_status()
+
+
+@application.route('/createkey', methods=['GET', 'POST'])
+@flask_login.login_required
+def createkey():
+    return jsonify({
+            'key': create_key_pair(
+                request.args.get('region')
+            )})
+
+
+@application.route('/ec2price', methods=['GET', 'POST'])
+@flask_login.login_required
+def ec2price():
+    if request.method == 'GET':
         return jsonify({
-            'response': create_cf_stack(
-                request.args.get('stackname'),
+            'cost': get_ec2_price(
+                request.args.get('instancesize'),
                 request.args.get('region'),
-                request.args.get('instance'),
-                request.args.get('keypair'),
-                request.args.get('userpassword'),
                 request.args.get('ttl'),
-                request.args.get('cost'),
                 request.args.get('labno')
             )})
 
 
-@application.route('/cfdelete', methods=['GET', 'POST'])
-def cfdelete():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({
-            'response':    delete_cf_stack(
-                request.args.get('stackname'),
-                request.args.get('region'),
-                request.args.get('stackid'),
-                request.args.get('starttime'),
-                request.args.get('instancesize')
-            )})
-
-
-@application.route('/addtime', methods=['GET', 'POST'])
-def addtime():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({
-            'response': update_instance_endtime(
-                request.args.get('stackname'),
-                request.args.get('region'),
-                request.args.get('stackid'),
-                request.args.get('add_mins'),
-                request.args.get('instancesize'),
-                request.args.get('cost')
-            )})
-
-
-@application.route('/setips', methods=['POST'])
-def setips():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return update_running_lab_ips()
-
-
-@application.route('/updatelabstatus', methods=['POST'])
-def updatelabstatus():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return update_global_lab_status()
-
-
-@application.route('/createkey', methods=['GET', 'POST'])
-def createkey():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({
-                'key': create_key_pair(
-                    request.args.get('region')
-                )})
-
-
-@application.route('/ec2price', methods=['GET', 'POST'])
-def ec2price():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        if request.method == 'GET':
-            return jsonify({
-                'cost': get_ec2_price(
-                    request.args.get('instancesize'),
-                    request.args.get('region'),
-                    request.args.get('ttl'),
-                    request.args.get('labno')
-                )})
-
-
 @application.route('/keypairs', methods=['GET', 'POST'])
+@flask_login.login_required
 def keypairs():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        if request.method == 'GET':
-            return jsonify({
-                'keypairs': list_keypairs(request.args.get('region'))})
+    if request.method == 'GET':
+        return jsonify({
+            'keypairs': list_keypairs(request.args.get('region'))})
 
 
 @application.route('/updatecreds', methods=['POST'])
+@flask_login.login_required
 def updatecreds():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        update_credentials(request.form['key'], request.form['secretkey'])
-        return "Done"
+    update_credentials(request.form['key'], request.form['secretkey'])
+    return "Done"
 
 
 @application.route('/testconnection', methods=['GET', 'POST'])
+@flask_login.login_required
 def testconnection():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({'result': test_aws_connection()})
+    return jsonify({'result': test_aws_connection()})
 
 
 @application.route('/deletedbentry', methods=['GET', 'POST'])
+@flask_login.login_required
 def deletedbentry():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({'result': delete_item(request.args.get('stackid'))})
+    return jsonify({'result': delete_item(request.args.get('stackid'))})
 
 
 @application.route('/updatedefaultregion', methods=['GET', 'POST'])
+@flask_login.login_required
 def updatedefaultregion():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({'result': update_config_item('default_region', str(request.args.get('defaultregion')))})
+    return jsonify({'result': update_config_item('default_region', str(request.args.get('defaultregion')))})
 
 
 @application.route('/initialConfig', methods=['GET', 'POST'])
+@flask_login.login_required
 def initialConfig():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({'result': initial_config(request.args.get('s3bucket'))})
+    return jsonify({'result': initial_config(request.args.get('s3bucket'))})
 
 
 @application.route('/copytos3', methods=['GET', 'POST'])
+@flask_login.login_required
 def copytos3():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({'result': create_s3_documents()})
+    return jsonify({'result': create_s3_documents()})
 
 
 @application.route('/updatePrices', methods=['GET', 'POST'])
+@flask_login.login_required
 def updatePrices():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({'result': get_ec2_pricelists()})
+    return jsonify({'result': get_ec2_pricelists()})
 
 
 @application.route('/cheapestregion', methods=['GET', 'POST'])
+@flask_login.login_required
 def cheapestregion():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return jsonify({'result': get_ec2_cheapest_regions(request.args.get('instance'))})
+    return jsonify({'result': get_ec2_cheapest_regions(request.args.get('instance'))})
 
 
 """ ----------------------------------------- Error Handling ----------------------------------------- """
@@ -273,6 +259,12 @@ def server_error(e):
     # Log the error and stacktrace.
     logging.exception('An error occurred during a request.')
     return 'An internal error occurred.', 500
+
+
+@login_manager.unauthorized_handler
+def unauthorized_handler():
+    return redirect('/')
+
 
 # run the app.
 if __name__ == "__main__":
