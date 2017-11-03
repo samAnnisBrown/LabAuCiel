@@ -2,8 +2,8 @@ import json
 
 import dateutil
 
-from ddb import scan_items_reverse
-from config import get_region_shortname
+from .ddb import scan_items_reverse
+from .config import get_region_shortname
 
 
 def report_all():
@@ -65,7 +65,7 @@ def report_all():
 
     # Add Region Cost
     regcost = 0
-    for key, value in reg_costs_dict.iteritems():
+    for key, value in reg_costs_dict.items():
         for i in range(input.__len__()):
             if input[i]['Region'] == key:
                 regcost = regcost + float(input[i].get('Cost'))
@@ -150,7 +150,7 @@ def report_cost_per_region():
 
     # Add Region Cost
     regcost = 0
-    for key, value in dictionary.iteritems():
+    for key, value in dictionary.items():
         for i in range(input.__len__()):
             if input[i]['Region'] == key:
                 regcost = regcost + float(input[i].get('Cost'))

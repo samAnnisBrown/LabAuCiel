@@ -1,12 +1,12 @@
 import json
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import dateutil
 import math
 
 from decimal import Decimal
-from connection import connect_boto_client, connect_boto_resource
-from ddb import add_item, scan_items, update_item, create_table
-from config import update_config_item, get_config_item, get_region_friendlyname
+from .connection import connect_boto_client, connect_boto_resource
+from .ddb import add_item, scan_items, update_item, create_table
+from .config import update_config_item, get_config_item, get_region_friendlyname
 from datetime import datetime, timedelta
 from dateutil import parser
 
@@ -37,7 +37,7 @@ def get_ec2_pricelists():
         url = 'https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/' + region + '/index.json'
 
         # And store it within the application
-        urllib.urlretrieve(url, 'core/resources/pricelists/ec2_' + region + '.json')
+        urllib.request.urlretrieve(url, 'core/resources/pricelists/ec2_' + region + '.json')
 
     return "Updated price files successfully downloaded."
 
@@ -51,7 +51,7 @@ def get_ec2_price(instancesize, region, runtime_mins, multiplier):
     hourlyTermCode = 'JRTCKXETXF'
     rateCode = '6YS6EN2CT7'
 
-    for sku, properties in products.iteritems():
+    for sku, properties in products.items():
         if properties['productFamily'] == 'Compute Instance':
             if (properties['attributes']['instanceType'] == instancesize and
                         properties['attributes']['operatingSystem'] == 'Windows' and
@@ -85,7 +85,7 @@ def get_ec2_cheapest_regions(instancesize):
         data = json.loads(pricelist)
         products = data['products']
 
-        for sku, properties in products.iteritems():
+        for sku, properties in products.items():
             if properties['productFamily'] == 'Compute Instance':
                 if (properties['attributes']['instanceType'] == instancesize and
                             properties['attributes']['operatingSystem'] == 'Windows' and
@@ -116,7 +116,7 @@ def list_global_cf_stacks():
     for region in list_regions():
         client = connect_boto_client('cloudformation', region)
         response = client.describe_stacks()
-        print response['Stacks']
+        print(response['Stacks'])
 
 
 def get_cf_stack_status(stackname, region):
@@ -197,7 +197,7 @@ def create_cf_stack(stackname, region, instance, keypair, userpassword, ttl, cos
                     'CAPABILITY_IAM'
                 ],
             )
-        except Exception, e:
+        except Exception as e:
             return str(e)
 
         # Update Database
@@ -275,7 +275,7 @@ def create_s3_documents(bucket=get_config_item('s3_bucket_name')):
                 Key="LabAuCielPostBoot.ps1",
                 Body=bootfile.read()
             )
-    except Exception, e:
+    except Exception as e:
         return str(e), 0
 
     return str("Success"), 1
@@ -294,7 +294,7 @@ def create_s3_bucket(bucketname):
                 },
             )
             return "Success", 1
-        except Exception, e:
+        except Exception as e:
             return str(e), 0
     else:
         try:
@@ -302,7 +302,7 @@ def create_s3_bucket(bucketname):
                 Bucket=bucketname
             )
             return "Success", 1
-        except Exception, e:
+        except Exception as e:
             return str(e), 0
 
 
@@ -474,8 +474,8 @@ def update_instance_endtime(stackname, region, stackid, add_mins, instancesize, 
                 }
             ]
         )
-    except Exception, e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         return str(e), 0
 
     # Calculate additional cost
