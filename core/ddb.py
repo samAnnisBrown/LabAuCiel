@@ -1,6 +1,6 @@
 from boto3.dynamodb.conditions import Key
 from decimal import Decimal
-from .connection import connect_boto_resource, connect_boto_client
+from .connection import connect_boto_resource
 from .config import get_config_item
 from .config import get_region_friendlyname
 

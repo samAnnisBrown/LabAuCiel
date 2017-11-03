@@ -3,10 +3,10 @@ import logging
 from flask import Flask, render_template, request, jsonify, session, flash, redirect
 from werkzeug.contrib.fixers import ProxyFix
 
-from .core.aws import *
-from .core.ddb import scan_items, delete_item
-from .core.reporting import *
-from .core.config import get_region_friendlyname
+from core.aws import *
+from core.ddb import scan_items, delete_item
+from core.reporting import *
+from core.config import get_region_friendlyname
 
 application = Flask(__name__)
 """ Proxy fix so that x-forwarded-proto works for SSL redirect """
