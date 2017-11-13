@@ -1,0 +1,34 @@
+{% extends "root.html" %}
+{% block content %}
+<div style="width:95%; display: block; margin-left: auto; margin-right: auto">
+    <table>
+        <tbody>
+        <tr>
+            <input class="form-control" id="pollyinputid" placeholder="Enter something for Polly to say...">
+            <button type="button" class="btn btn-primary" onclick="itsAlive()">Talk</button>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function itsAlive() {
+        var pollyInput = document.getElementById('pollyinputid').value;
+
+        if (pollyInput.length === 0) {
+           swal("Whoops!", "Looks like you didn't type anything... I'm smarter than that you know!", "warning")
+           return;
+       }
+
+       $.ajax({
+           type: "GET",
+           url: '/pollytalk',
+           data: {'pollyinput': pollyInput},
+           success: function() {
+               $(this).addClass("done");
+           }
+       })
+    }
+</script>
+
+{% endblock %}

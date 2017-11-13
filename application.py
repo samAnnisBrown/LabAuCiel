@@ -4,6 +4,7 @@ import flask_login, logging
 
 
 from core.aws import *
+from core.polly import *
 from core.ddb import scan_items, delete_item
 from core.reporting import *
 from core.config import get_region_friendlyname
@@ -53,7 +54,6 @@ def root():
 
 @application.route('/login',  methods=['GET', 'POST'])
 def login():
-    print(request.form['username'])
     if request.form['username'] in users:
         if request.form['password'] == users[request.form['username']]['password']:
             user = User()
@@ -97,6 +97,12 @@ def settings():
                            initialised=get_config_item('initialised'),
                            default_region=get_region_friendlyname(get_config_item('default_region'))
                            )
+
+
+@application.route('/polly')
+@flask_login.login_required
+def whatsthat():
+    return render_template('polly.html')
 
 
 @application.route('/reports')
@@ -249,6 +255,14 @@ def updatePrices():
 @flask_login.login_required
 def cheapestregion():
     return jsonify({'result': get_ec2_cheapest_regions(request.args.get('instance'))})
+
+
+""" ----------------------------------------- Polly ----------------------------------------- """
+
+
+@application.route('/pollytalk', methods=['GET', 'POST'])
+def pollytalk():
+    return polly_talk(request.args.get('pollyinput'))
 
 
 """ ----------------------------------------- Error Handling ----------------------------------------- """
