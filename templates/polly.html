@@ -6,6 +6,7 @@
         <tr>
             <input class="form-control" id="pollyinputid" placeholder="Enter something for Polly to say...">
             <button type="button" class="btn btn-primary" onclick="itsAlive()">Talk</button>
+            <button type="button" class="btn btn-primary" onclick="itTalks()">Actually Talk!</button>
         </tr>
         </tbody>
     </table>
@@ -28,6 +29,11 @@
                $(this).addClass("done");
            }
        })
+    }
+
+    function itTalks() {
+        var audio = new Audio('https://s3-ap-southeast-2.amazonaws.com/labauciel-live/labaucielPollyOutput.mp3');
+        audio.play();
     }
 </script>
 
