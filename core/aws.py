@@ -264,13 +264,13 @@ def create_s3_documents(bucket=get_config_item('s3_bucket_name')):
 
     try:
         with open('core/resources/LabAuCielDeleteStack.ps1') as stackfile:
-            client.put_object(
+            client.putObject(
                 Bucket=bucket,
                 Key="LabAuCielDeleteStack.ps1",
                 Body=stackfile.read()
             )
         with open('core/resources/LabAuCielPostBoot.ps1') as bootfile:
-            client.put_object(
+            client.putObject(
                 Bucket=bucket,
                 Key="LabAuCielPostBoot.ps1",
                 Body=bootfile.read()

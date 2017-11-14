@@ -262,7 +262,7 @@ def cheapestregion():
 
 @application.route('/pollytalk', methods=['GET', 'POST'])
 def pollytalk():
-    return polly_talk(request.args.get('pollyinput'))
+    return polly.toS3(request.args.get('pollyinput'))
 
 
 """ ----------------------------------------- Error Handling ----------------------------------------- """

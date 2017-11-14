@@ -2,18 +2,19 @@ from .connection import *
 
 
 class s3():
-    def put_object(bucket, key, data, region=get_config_item('default_region')):
+
+    @staticmethod
+    def putObject(bucket, key, value, region=get_config_item('default_region')):
         client = connect_boto_client('s3', region)
 
-        object = client.put_object(
+        client.put_object(
             Bucket=bucket,
             Key=key,
-            Body=data,
+            Body=value,
         )
 
-        object.set_acl('public-read')
-
-    def list_objects(bucket, region=get_config_item('default_region')):
+    @staticmethod
+    def listObjects(bucket, region=get_config_item('default_region')):
         client = connect_boto_client('s3', region)
 
         output = client.list_objects_v2(
@@ -22,10 +23,11 @@ class s3():
 
         return output
 
-    def get_object(bucket, key, region=get_config_item('default_region')):
+    @staticmethod
+    def getObject(bucket, key, region=get_config_item('default_region')):
         client = connect_boto_client('s3', region)
 
-        output = client.get_object(
+        output = client.getObject(
             Bucket=bucket,
             Key=key
         )
