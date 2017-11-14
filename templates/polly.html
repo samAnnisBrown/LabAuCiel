@@ -1,20 +1,34 @@
 {% extends "root.html" %}
 {% block content %}
 <div style="width:95%; display: block; margin-left: auto; margin-right: auto">
-    <table>
+    <tbody>
+    <table class="table" style="text-align:center;">
         <tbody>
-        <tr>
-            <input class="form-control" id="pollyinputid" placeholder="Enter something for Polly to say...">
-            <button type="button" class="btn btn-primary" onclick="itsAlive()">Talk</button>
-            <button type="button" class="btn btn-primary" onclick="itTalks()">Actually Talk!</button>
-        </tr>
-        </tbody>
+            <tr>
+                <td style="vertical-align: middle;" width="80%">
+                    <input class="form-control" id="pollyinputid" placeholder="Enter something for Polly to say...">
+                </td>
+                <td>
+                   <select class="form-control" id="voice">
+                        {% for voice in voices %}
+                            {% if voice['Name'] == 'Geraint' %}
+                                <option value='{{ voice['Name'] }}' selected>{{ voice['Name'] }}, {{ voice['LanguageName'] }}, {{ voice['Gender'] }}</option>
+                            {% elif 'English' in voice['LanguageName'] or 'French' in voice['LanguageName'] %}
+                                <option value='{{ voice['Id'] }}'>{{ voice['Name'] }}, {{ voice['LanguageName'] }}, {{ voice['Gender'] }}</option>
+                            {%  endif %}
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
     </table>
+    <button type="button" class="btn btn-primary" onclick="itsAlive()">Talk</button>
+    </tbody>
 </div>
 
 <script>
     function itsAlive() {
         var pollyInput = document.getElementById('pollyinputid').value;
+        var pollyVoice = document.getElementById('voice').value;
 
         if (pollyInput.length === 0) {
            swal("Whoops!", "Looks like you didn't type anything... I'm smarter than that you know!", "warning")
@@ -24,17 +38,25 @@
        $.ajax({
            type: "GET",
            url: '/pollytalk',
-           data: {'pollyinput': pollyInput},
-           success: function() {
-               $(this).addClass("done");
+           data: {'pollyinput': pollyInput, 'voice': pollyVoice},
+           success: function(response){
+               var audio = new Audio(response['result']);
+               audio.play();
            }
        })
     }
 
-    function itTalks() {
-        var audio = new Audio('https://s3-ap-southeast-2.amazonaws.com/labauciel-live/labaucielPollyOutput.mp3');
-        audio.play();
+    function listVoices() {
+        $.ajax({
+           type: "GET",
+           url: '/pollyvoices',
+           success: function(response){
+               var audio = new Audio(response['result']);
+               audio.play();
+           }
+       })
     }
+
 </script>
 
 {% endblock %}

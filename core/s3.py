@@ -34,6 +34,21 @@ class s3():
 
         return output
 
+    @staticmethod
+    def presignedUrl(bucket, key, duration=900, region=get_config_item('default_region')):
+        client = connect_boto_client('s3', region)
+
+        url = client.generate_presigned_url(
+            ClientMethod='get_object',
+            ExpiresIn=duration,
+            Params={
+                'Bucket': bucket,
+                'Key': key,
+            }
+        )
+
+        return url
+
 
 
 

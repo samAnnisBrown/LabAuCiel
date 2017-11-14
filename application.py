@@ -102,7 +102,8 @@ def settings():
 @application.route('/polly')
 @flask_login.login_required
 def whatsthat():
-    return render_template('polly.html')
+    return render_template('polly.html',
+                           voices=polly.listVoices())
 
 
 @application.route('/reports')
@@ -262,8 +263,17 @@ def cheapestregion():
 
 @application.route('/pollytalk', methods=['GET', 'POST'])
 def pollytalk():
-    return polly.toS3(request.args.get('pollyinput'))
+    url = jsonify({'result': polly.toS3(
+        request.args.get('pollyinput'),
+        request.args.get('voice')
+    )})
+    return url
 
+
+@application.route('/pollyvoices', methods=['GET', 'POST'])
+def pollyvoices():
+    url = jsonify({'result': polly.listVoices()})
+    return url
 
 """ ----------------------------------------- Error Handling ----------------------------------------- """
 

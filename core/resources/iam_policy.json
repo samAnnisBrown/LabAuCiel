@@ -110,6 +110,12 @@
             "Resource": [
                 "*"
             ]
+        },
+        {
+            "Effect": "Allow",
+
+            "Action": "sts:AssumeRole",
+            "Resource":  "arn:aws:iam::618252783261:role/labauciel-polly-s3"
         }
     ]
 }

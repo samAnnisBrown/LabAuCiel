@@ -19,3 +19,18 @@ def connect_boto_resource(service, region):
                        region_name=region)
 
     return resource
+
+
+class auth():
+
+    @staticmethod
+    def sts(duration=900, region=get_config_item('default_region')):
+        client = connect_boto_client('sts', region)
+
+        response = client.assume_role(
+            RoleArn='arn:aws:iam::618252783261:role/labauciel-polly-s3',
+            RoleSessionName='LabAuCiel_S3Access',
+            DurationSeconds=duration
+        )
+
+        return response
