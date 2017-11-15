@@ -5,6 +5,7 @@ import flask_login, logging
 
 from core.aws import *
 from core.polly import *
+from core.rekognition import *
 from core.ddb import scan_items, delete_item
 from core.reporting import *
 from core.config import get_region_friendlyname
@@ -104,6 +105,12 @@ def settings():
 def whatsthat():
     return render_template('polly.html',
                            voices=polly.listVoices())
+
+
+@application.route('/rekognition')
+@flask_login.login_required
+def rekognition():
+    return render_template('rekognition.html')
 
 
 @application.route('/reports')
@@ -258,7 +265,7 @@ def cheapestregion():
     return jsonify({'result': get_ec2_cheapest_regions(request.args.get('instance'))})
 
 
-""" ----------------------------------------- Polly ----------------------------------------- """
+""" ----------------------------------------- ToolKits ----------------------------------------- """
 
 
 @application.route('/pollytalk', methods=['GET', 'POST'])
@@ -274,6 +281,15 @@ def pollytalk():
 def pollyvoices():
     url = jsonify({'result': polly.listVoices()})
     return url
+
+
+@application.route('/rekognise', methods=['GET', 'POST'])
+def rekognise():
+    image = jsonify({'result': rekog.detectObject(
+        request.args.get('image')
+    )})
+    return image
+
 
 """ ----------------------------------------- Error Handling ----------------------------------------- """
 

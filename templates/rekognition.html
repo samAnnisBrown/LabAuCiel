@@ -1,0 +1,68 @@
+{% extends "root.html" %}
+{% block content %}
+<div style="width:95%; display: block; margin-left: auto; margin-right: auto">
+    <tbody>
+        <table class="table" style="text-align:center;">
+            <tbody>
+                <tr>
+                    <td style="vertical-align: middle;" colspan="2">
+                        <div id="container">
+                            <video id="video" width="720" height="414" style="border: 10px #333 solid; background-color: #666;" autoplay></video>
+                            <canvas id="canvas" width="700" height="394" style="border: 10px #333 solid; background-color: #666;"></canvas>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <button type="button" class="btn btn-danger" id="snap">What the smeg is that?</button>
+                        <button type="button" class="btn btn-danger" onclick=rekognise()>To Recog</button>
+                    </td>
+                    <td>
+                        Hello
+                    </td>
+                </tr>
+        </table>
+    </tbody>
+</div>
+
+<script>
+// Grab elements, create settings, etc.
+var video = document.getElementById('video');
+
+// Get access to the camera!
+if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+        video.src = window.URL.createObjectURL(stream);
+        video.play();
+    });
+}
+
+// Elements for taking the snapshot
+var canvas = document.getElementById('canvas');
+var context = canvas.getContext('2d');
+var video = document.getElementById('video');
+
+// Trigger photo take
+document.getElementById("snap").addEventListener("click", function() {
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+});
+
+function rekognise() {
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    	$.ajax({
+            type: "GET",
+            url: '/rekognise',
+            contentType: 'binary/octet-stream',
+            processData: false,
+            data: {'image': uri},
+            success: function(response){
+
+           }
+       })
+}
+
+
+</script>
+
+{% endblock %}
