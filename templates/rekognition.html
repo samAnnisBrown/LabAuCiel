@@ -50,18 +50,16 @@ document.getElementById("snap").addEventListener("click", function() {
 
 function rekognise() {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    	$.ajax({
-            type: "GET",
-            url: '/rekognise',
-            contentType: 'binary/octet-stream',
-            processData: false,
-            data: {'image': uri},
-            success: function(response){
+    var image = canvas.toDataURL("image/jpeg");
 
-           }
+    $.ajax({
+        type: "GET",
+        url: '/rekognise',
+        data: {'image': image},
+        success: function(response){
+        }
        })
 }
-
 
 </script>
 

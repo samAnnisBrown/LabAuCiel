@@ -1,3 +1,5 @@
+import base64
+
 from flask import Flask, render_template, request, jsonify, session, flash, redirect
 from werkzeug.contrib.fixers import ProxyFix
 import flask_login, logging
@@ -285,9 +287,13 @@ def pollyvoices():
 
 @application.route('/rekognise', methods=['GET', 'POST'])
 def rekognise():
-    image = jsonify({'result': rekog.detectObject(
-        request.args.get('image')
-    )})
+    image = request.args.get('image')
+
+    content = image.split(';')[1]
+    image_encoded = content.split(',')[1]
+    body = base64.decodebytes(image_encoded.encode('utf-8'))
+
+    image = jsonify({'result': rekog.detectObject(body)})
     return image
 
 
