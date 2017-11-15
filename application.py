@@ -293,8 +293,8 @@ def rekognise():
     image_encoded = content.split(',')[1]
     body = base64.decodebytes(image_encoded.encode('utf-8'))
 
-    image = jsonify({'result': rekog.detectObject(body)})
-    return image
+    url = jsonify({'result': rekog.detectObject(body)})
+    return url
 
 
 """ ----------------------------------------- Error Handling ----------------------------------------- """

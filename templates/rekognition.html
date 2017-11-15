@@ -57,6 +57,8 @@ function rekognise() {
         url: '/rekognise',
         data: {'image': image},
         success: function(response){
+            var audio = new Audio(response['result']);
+            audio.play();
         }
        })
 }
