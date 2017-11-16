@@ -1,4 +1,3 @@
-from core.s3 import *
 from core.polly import *
 
 

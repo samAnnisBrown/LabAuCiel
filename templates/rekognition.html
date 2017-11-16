@@ -58,7 +58,8 @@ function rekognise() {
     var context = canvas.getContext('2d');
     var video = document.getElementById('videoCanvas');
 
-    context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
     var image = canvas.toDataURL("image/jpeg");
 
     // Get details from server

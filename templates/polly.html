@@ -46,17 +46,6 @@
        })
     }
 
-    function listVoices() {
-        $.ajax({
-           type: "GET",
-           url: '/pollyvoices',
-           success: function(response){
-               var audio = new Audio(response['result']);
-               audio.play();
-           }
-       })
-    }
-
 </script>
 
 {% endblock %}
