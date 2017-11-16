@@ -19,9 +19,9 @@ application.wsgi_app = ProxyFix(application.wsgi_app)
 # Logging
 logging.config.dictConfig(yaml.load(open('logging.yaml')))
 logfile = logging.getLogger('file')
-logconsole = logging.getLogger('console')
+#logconsole = logging.getLogger('console')
 logfile.debug("Debug FILE")
-logconsole.debug("Debug CONSOLE")
+#logconsole.debug("Debug CONSOLE")
 
 # Login Management
 login_manager = flask_login.LoginManager()
