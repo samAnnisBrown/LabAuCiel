@@ -112,7 +112,8 @@ def whatsthat():
 @application.route('/rekognition')
 @flask_login.login_required
 def rekognition():
-    return render_template('rekognition.html')
+    return render_template('rekognition.html',
+                           voices=polly.listVoices())
 
 
 @application.route('/reports')
@@ -288,12 +289,13 @@ def pollyvoices():
 @application.route('/rekognise', methods=['GET', 'POST'])
 def rekognise():
     image = request.args.get('image')
+    voice = request.args.get('voice')
 
     content = image.split(';')[1]
     image_encoded = content.split(',')[1]
     body = base64.decodebytes(image_encoded.encode('utf-8'))
 
-    url = jsonify({'result': rekog.detectObject(body)})
+    url = jsonify({'result': rekog.detectObject(body, voice)})
     return url
 
 

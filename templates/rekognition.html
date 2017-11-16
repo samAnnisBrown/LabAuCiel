@@ -5,20 +5,30 @@
         <table class="table" style="text-align:center;">
             <tbody>
                 <tr>
-                    <td style="vertical-align: middle;" colspan="2">
-                        <div id="container">
-                            <video id="video" width="720" height="414" style="border: 10px #333 solid; background-color: #666;" autoplay></video>
-                            <canvas id="canvas" width="700" height="394" style="border: 10px #333 solid; background-color: #666;"></canvas>
-                        </div>
+                    <td style="vertical-align: middle;">
+                        <div><h3>Webcam Input</h3></div>
+                        <video id="videoCanvas" width="720" height="414" style="border: 10px #333 solid; background-color: #666;" autoplay></video>
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <div><h3>Image Sent To Rekognition</h3></div>
+                        <canvas id="outputCanvas" width="700" height="394" style="border: 10px #333 solid; background-color: #666;"></canvas>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <button type="button" class="btn btn-danger" id="snap">What the smeg is that?</button>
-                        <button type="button" class="btn btn-danger" onclick=rekognise()>To Recog</button>
+                        <button type="button" class="btn btn-danger" onclick=rekognise() style="width: 250px">What the smeg am I looking at!?</button>
+                        <select class="form-control" id="voice" style="width: 250px; display: block; margin:0 auto;">
+                            {% for voice in voices %}
+                                {% if voice['Name'] == 'Geraint' %}
+                                    <option value='{{ voice['Name'] }}' selected>{{ voice['Name'] }}, {{ voice['LanguageName'] }}, {{ voice['Gender'] }}</option>
+                                {% elif 'English' in voice['LanguageName'] or 'French' in voice['LanguageName'] %}
+                                    <option value='{{ voice['Id'] }}'>{{ voice['Name'] }}, {{ voice['LanguageName'] }}, {{ voice['Gender'] }}</option>
+                                {%  endif %}
+                            {% endfor %}
+                        </select>
                     </td>
                     <td>
-                        Hello
+                        <p id="regoktext"></p>
                     </td>
                 </tr>
         </table>
@@ -27,7 +37,7 @@
 
 <script>
 // Grab elements, create settings, etc.
-var video = document.getElementById('video');
+var video = document.getElementById('videoCanvas');
 
 // Get access to the camera!
 if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -37,28 +47,29 @@ if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     });
 }
 
-// Elements for taking the snapshot
-var canvas = document.getElementById('canvas');
-var context = canvas.getContext('2d');
-var video = document.getElementById('video');
-
-// Trigger photo take
-document.getElementById("snap").addEventListener("click", function() {
-
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-});
-
 function rekognise() {
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Clear text
+    document.getElementById("regoktext").innerHTML = "";
+    // Get polly voice
+    var pollyVoice = document.getElementById('voice').value;
+
+    // Elements for taking the snapshot
+    var canvas = document.getElementById('outputCanvas');
+    var context = canvas.getContext('2d');
+    var video = document.getElementById('videoCanvas');
+
+    context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
     var image = canvas.toDataURL("image/jpeg");
 
+    // Get details from server
     $.ajax({
         type: "GET",
         url: '/rekognise',
-        data: {'image': image},
+        data: {'image': image, 'voice': pollyVoice},
         success: function(response){
-            var audio = new Audio(response['result']);
+            var audio = new Audio(response['result'][0]);
             audio.play();
+            document.getElementById("regoktext").innerHTML = response['result'][1];
         }
        })
 }
