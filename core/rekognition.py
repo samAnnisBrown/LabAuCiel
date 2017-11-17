@@ -12,19 +12,11 @@ class rekog():
             Image={
                 'Bytes': image,
             },
-            MaxLabels=1,
+            MaxLabels=4,
         )
 
-        foundobject = True
-
-        # Check if something is found
-        try:
-            response['Labels'][0]['Name']
-        except:
-            foundobject = False
-
         # If found, do this
-        if foundobject:
+        try:
             # If the object is a person
             if response['Labels'][0]['Name'] == 'People' or response['Labels'][0]['Name'] == 'Human':
 
@@ -78,18 +70,36 @@ class rekog():
 
             # If it's not a person, return object details
             else:
-
+                print(len(response['Labels']))
+                print(response)
                 object = str(response['Labels'][0]['Name']).lower()
                 confidence = str(round(response['Labels'][0]['Confidence'], 2))
 
-                if object[0] in ('a', 'e', 'i', 'o', 'u'):
-                    text = "I\'m " + confidence + " percent sure I\'m looking at an " + object + "."
+                numberofobjects = len(response['Labels'])
+
+                if numberofobjects > 1:
+                    if object[0] in ('a', 'e', 'i', 'o', 'u'):
+                        text = "Hmm... I am " + confidence + " percent sure there is an " + object
+                    else:
+                        text = "Hmm... I am " + confidence + " percent sure there is a " + object
+
+                    for i in range(1, numberofobjects):
+                        object = str(response['Labels'][i]['Name']).lower()
+                        confidence = str(round(response['Labels'][i]['Confidence'], 2))
+                        if object[0] in ('a', 'e', 'i', 'o', 'u'):
+                            text += "; " + confidence + " percent sure there is an " + object
+                        else:
+                            text += "; " + confidence + " percent sure there is a " + object
+
                 else:
-                    text = "I\'m " + confidence + " percent sure I\'m looking at a " + object + "."
+                    if object[0] in ('a', 'e', 'i', 'o', 'u'):
+                        text = "I\'m " + confidence + " percent sure I\'m looking at an " + object + "."
+                    else:
+                        text = "I\'m " + confidence + " percent sure I\'m looking at a " + object + "."
                 print(text)
 
         # Nothing found at all
-        else:
+        except:
             text = "I don\'t know what the hell I\'m looking at!"
             print(text)
 
