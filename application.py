@@ -299,7 +299,7 @@ def rekognise():
     body = base64.decodebytes(image_encoded.encode('utf-8'))
 
     # Send to Rekognition
-    url = jsonify({'result': rekog.detectObject(body, voice)})
+    url = jsonify({'result': rekog.detectObject(voice)})
     return url
 
 
@@ -312,7 +312,8 @@ def rekogtos3():
     body = base64.decodebytes(image_encoded.encode('utf-8'))
 
     s3.putObject(get_config_item('s3_bucket_name'), 'rekognition/labauciel_latest.jpeg', body)
-    return 1
+    url = jsonify({'result': rekog.detectObject(body, 'Geraint')})
+    return url
 
 
 """ ----------------------------------------- Error Handling ----------------------------------------- """

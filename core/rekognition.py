@@ -74,7 +74,7 @@ class rekog():
                     if smiling:
                         text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they\'re ' + emotion + " and smiling.\n They're likely between " + agelow + " and " + agehigh + " years old."
                     else:
-                        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they\'re ' + emotion + " and aren't smiling.\n They're likely between " + agelow + " and " + agehigh + " years old."
+                        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they\'re ' + emotion + " and aren't smiling.\nAlso, hopefully I don't offend them, but it looks like they're between " + agelow + " and " + agehigh + " years old."
 
                     print(text)
 

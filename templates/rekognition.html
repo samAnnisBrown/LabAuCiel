@@ -67,7 +67,7 @@ function rekognise() {
     $.ajax({
         type: "GET",
         url: '/rekognise',
-        data: {'image': image, 'voice': pollyVoice},
+        data: {'voice': pollyVoice},
         success: function(response){
             var audio = new Audio(response['result'][0]);
             audio.play();
@@ -93,8 +93,11 @@ function tos3() {
     $.ajax({
         type: "POST",
         url: '/rekogtos3',
-        data: {'data': image},
+        data: {'data': image, 'voice': pollyVoice},
         success: function(response){
+            var audio = new Audio(response['result'][0]);
+            audio.play();
+            document.getElementById("regoktext").innerHTML = response['result'][1];
         }
        })
 }
