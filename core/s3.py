@@ -12,7 +12,6 @@ class s3():
             Key=key,
             Body=value,
         )
-    print('Posted to S3')
 
     @staticmethod
     def listObjects(bucket, region=get_config_item('default_region')):
