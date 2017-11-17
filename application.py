@@ -1,9 +1,9 @@
 import base64
 
-from flask import Flask, render_template, request, jsonify, session, flash, redirect
+from flask import Flask, render_template, request, jsonify, redirect
 from werkzeug.contrib.fixers import ProxyFix
 import flask_login
-import logging, logging.config, yaml
+import logging
 
 from core.aws import *
 from core.rekognition import *
@@ -15,13 +15,6 @@ application = Flask(__name__)
 
 # Proxy fix so that x-forwarded-proto works for SSL redirect
 application.wsgi_app = ProxyFix(application.wsgi_app)
-
-# Logging
-logging.config.dictConfig(yaml.load(open('logging.yaml')))
-logfile = logging.getLogger('file')
-logconsole = logging.getLogger('console')
-logfile.debug("Debug FILE")
-logconsole.debug("Debug CONSOLE")
 
 # Login Management
 login_manager = flask_login.LoginManager()
