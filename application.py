@@ -12,11 +12,7 @@ from core.reporting import *
 from core.config import get_region_friendlyname
 
 # Logging
-logging.config.dictConfig(yaml.load(open('core/resources/logging.conf')))
-logfile = logging.getLogger('file')
-logconsole = logging.getLogger('console')
-logfile.debug("Debug FILE")
-logconsole.debug("Debug CONSOLE")
+logging.basicConfig(filename='/tmp/labauciel.log', level=logging.DEBUG)
 
 application = Flask(__name__)
 
