@@ -12,7 +12,7 @@ from core.reporting import *
 from core.config import get_region_friendlyname
 
 # Logging
-logging.basicConfig(filename='/tmp/labauciel.log', level=logging.DEBUG)
+#logging.basicConfig(filename='/tmp/labauciel.log', level=logging.DEBUG)
 
 application = Flask(__name__)
 
@@ -274,6 +274,7 @@ def cheapestregion():
 
 
 @application.route('/pollytalk', methods=['GET', 'POST'])
+@flask_login.login_required
 def pollytalk():
     url = jsonify({'result': polly.toS3(
         request.args.get('pollyinput'),
@@ -283,36 +284,24 @@ def pollytalk():
 
 
 @application.route('/pollyvoices', methods=['GET', 'POST'])
+@flask_login.login_required
 def pollyvoices():
     url = jsonify({'result': polly.listVoices()})
     return url
 
 
-@application.route('/rekognise', methods=['GET', 'POST'])
+
+@application.route('/rekognise', methods=['POST'])
 def rekognise():
-    image = request.args.get('image')
-    voice = request.args.get('voice')
-
-    # Convert received content to utf-8
-    content = image.split(';')[1]
-    image_encoded = content.split(',')[1]
-    body = base64.decodebytes(image_encoded.encode('utf-8'))
-
-    # Send to Rekognition
-    url = jsonify({'result': rekog.detectObject(voice)})
-    return url
-
-
-@application.route('/rekogtos3', methods=['POST'])
-def rekogtos3():
     image = request.values['data']
+    voice = request.values['voice']
     # Convert received content to utf-8
     content = image.split(';')[1]
     image_encoded = content.split(',')[1]
     body = base64.decodebytes(image_encoded.encode('utf-8'))
 
-    s3.putObject(get_config_item('s3_bucket_name'), 'rekognition/labauciel_latest.jpeg', body)
-    url = jsonify({'result': rekog.detectObject(body, 'Geraint')})
+    #s3.putObject(get_config_item('s3_bucket_name'), 'rekognition/labauciel_latest.jpeg', body)
+    url = jsonify({'result': rekog.detectObject(body, voice)})
     return url
 
 

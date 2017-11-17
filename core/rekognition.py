@@ -15,8 +15,6 @@ class rekog():
             MaxLabels=1,
         )
 
-        #s3.putObject(get_config_item('s3_bucket_name'), 'rekognition/latest.jpeg', image)
-
         foundobject = True
 
         # Check if something is found
@@ -50,7 +48,7 @@ class rekog():
                     celebname = celeb['CelebrityFaces'][0]['Name']
                     celebconfidence = str(round(celeb['CelebrityFaces'][0]['Face']['Confidence'], 2))
 
-                    text = "Well, that's definitely a famous person!  I\'m " + celebconfidence + " percent confident that I\'m looking at " + celebname + "."
+                    text = "This looks like a celebrity!  I\'m " + celebconfidence + " percent confident that I\'m looking at " + celebname + "."
                     print(text)
 
                 # If not a celebrity, get details on the face
@@ -72,9 +70,9 @@ class rekog():
                     agehigh = str(person['FaceDetails'][0]['AgeRange']['High'])
 
                     if smiling:
-                        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they\'re ' + emotion + " and smiling.\n They're likely between " + agelow + " and " + agehigh + " years old."
+                        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they are ' + emotion + " and smiling. I think they are between " + agelow + " and " + agehigh + " years old."
                     else:
-                        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they\'re ' + emotion + " and aren't smiling.\nAlso, hopefully I don't offend them, but it looks like they're between " + agelow + " and " + agehigh + " years old."
+                        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they are ' + emotion + " and are not smiling. I think they are between " + agelow + " and " + agehigh + " years old."
 
                     print(text)
 
