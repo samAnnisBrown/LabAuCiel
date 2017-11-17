@@ -3,13 +3,20 @@ import base64
 from flask import Flask, render_template, request, jsonify, redirect
 from werkzeug.contrib.fixers import ProxyFix
 import flask_login
-import logging
+import logging, logging.config, yaml
 
 from core.aws import *
 from core.rekognition import *
 from core.ddb import scan_items, delete_item
 from core.reporting import *
 from core.config import get_region_friendlyname
+
+# Logging
+logging.config.dictConfig(yaml.load(open('core/resources/logging.conf')))
+logfile = logging.getLogger('file')
+logconsole = logging.getLogger('console')
+logfile.debug("Debug FILE")
+logconsole.debug("Debug CONSOLE")
 
 application = Flask(__name__)
 
