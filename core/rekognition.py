@@ -14,6 +14,7 @@ class rekog():
             },
             MaxLabels=4,
         )
+        print(response)
 
         # If found, do this
         try:
@@ -26,6 +27,7 @@ class rekog():
                         'Bytes': image,
                     }
                 )
+                print(celeb)
 
                 celebexist = True
 
@@ -54,6 +56,7 @@ class rekog():
                             'ALL',
                         ]
                     )
+                    print(person)
 
                     gender = person['FaceDetails'][0]['Gender']['Value']
                     smiling = person['FaceDetails'][0]['Smile']['Value']
