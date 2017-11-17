@@ -12,6 +12,7 @@ class s3():
             Key=key,
             Body=value,
         )
+    print('Posted to S3')
 
     @staticmethod
     def listObjects(bucket, region=get_config_item('default_region')):
@@ -35,11 +36,11 @@ class s3():
         return output
 
     @staticmethod
-    def presignedUrl(bucket, key, duration=900, region=get_config_item('default_region')):
+    def presignedUrl(bucket, key, method='get_object', duration=900, region=get_config_item('default_region')):
         client = connect_boto_client('s3', region)
 
         url = client.generate_presigned_url(
-            ClientMethod='get_object',
+            ClientMethod=method,
             ExpiresIn=duration,
             Params={
                 'Bucket': bucket,
@@ -48,7 +49,5 @@ class s3():
         )
 
         return url
-
-
 
 

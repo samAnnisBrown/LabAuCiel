@@ -12,7 +12,7 @@ from core.reporting import *
 from core.config import get_region_friendlyname
 
 # Logging
-logging.basicConfig(filename='/tmp/labauciel.log', level=logging.DEBUG)
+#logging.basicConfig(filename='/tmp/labauciel.log', level=logging.DEBUG)
 
 application = Flask(__name__)
 
@@ -301,6 +301,18 @@ def rekognise():
     # Send to Rekognition
     url = jsonify({'result': rekog.detectObject(body, voice)})
     return url
+
+
+@application.route('/rekogtos3', methods=['POST'])
+def rekogtos3():
+    image = request.values['data']
+    # Convert received content to utf-8
+    content = image.split(';')[1]
+    image_encoded = content.split(',')[1]
+    body = base64.decodebytes(image_encoded.encode('utf-8'))
+
+    s3.putObject(get_config_item('s3_bucket_name'), 'rekognition/labauciel_latest.jpeg', body)
+    return 1
 
 
 """ ----------------------------------------- Error Handling ----------------------------------------- """
