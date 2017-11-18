@@ -104,20 +104,6 @@ def settings():
                            )
 
 
-@application.route('/polly')
-@flask_login.login_required
-def whatsthat():
-    return render_template('polly.html',
-                           voices=polly.listVoices())
-
-
-@application.route('/rekognition')
-@flask_login.login_required
-def rekognition():
-    return render_template('rekognition.html',
-                           voices=polly.listVoices())
-
-
 @application.route('/reports')
 @flask_login.login_required
 def reports():
@@ -270,11 +256,25 @@ def cheapestregion():
     return jsonify({'result': get_ec2_cheapest_regions(request.args.get('instance'))})
 
 
-""" ----------------------------------------- ToolKits ----------------------------------------- """
+""" ----------------------------------------- No Login Required ----------------------------------------- """
+
+
+@application.route('/polly')
+def whatsthat():
+    return render_template('polly.html',
+                           voices=polly.listVoices())
+
+
+@application.route('/rekognition')
+def rekognition():
+    return render_template('rekognition.html',
+                           voices=polly.listVoices())
+
+
+""" ----------------------------------------- ToolKits - No Login Required ----------------------------------------- """
 
 
 @application.route('/pollytalk', methods=['GET', 'POST'])
-@flask_login.login_required
 def pollytalk():
     url = jsonify({'result': polly.toS3(
         request.args.get('pollyinput'),
@@ -284,11 +284,9 @@ def pollytalk():
 
 
 @application.route('/pollyvoices', methods=['GET', 'POST'])
-@flask_login.login_required
 def pollyvoices():
     url = jsonify({'result': polly.listVoices()})
     return url
-
 
 
 @application.route('/rekognise', methods=['POST'])
@@ -301,7 +299,7 @@ def rekognise():
     body = base64.decodebytes(image_encoded.encode('utf-8'))
 
     #s3.putObject(get_config_item('s3_bucket_name'), 'rekognition/labauciel_latest.jpeg', body)
-    url = jsonify({'result': rekog.detectObject(body, voice)})
+    url = jsonify({'result': rekog.returnPollyUrl(body, voice)})
     return url
 
 

@@ -16,7 +16,7 @@
                 </tr>
                 <tr>
                     <td>
-                        <button type="button" class="btn btn-danger" onclick=rekognise() style="width: 250px">What the smeg am I looking at!?</button>
+                        <button type="button" class="btn btn-success" onclick=rekognise() style="width: 250px">What am I lookin' at!?</button>
                         <select class="form-control" id="voice" style="width: 250px; display: block; margin:0 auto;">
                             {% for voice in voices %}
                                 {% if voice['Name'] == 'Geraint' %}
@@ -54,6 +54,7 @@ if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
 
 function rekognise() {
 // Get polly voice
+    document.getElementById("regoktext").innerHTML = "Gimme a sec... Just trying to figure out what this is!";
     var pollyVoice = document.getElementById('voice').value;
 
     // Elements for taking the snapshot

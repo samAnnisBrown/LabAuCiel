@@ -4,51 +4,43 @@ from core.polly import *
 class rekog():
 
     @staticmethod
-    def detectObject(image, voice):
-
+    def returnPollyUrl(image, voice):
         client = connect_boto_client('rekognition', 'us-west-2')
 
-        response = client.detect_labels(
+        objectResponse = client.detect_labels(
             Image={
                 'Bytes': image,
             },
             MaxLabels=4,
         )
-        print(response)
+        print(objectResponse)
 
-        # If found, do this
+        # Let's try to detect what's in the response.
         try:
-            # If the object is a person
-            if response['Labels'][0]['Name'] == 'People' or response['Labels'][0]['Name'] == 'Human':
+            # First, see if the object is a person
+            if objectResponse['Labels'][0]['Name'] == 'People' or objectResponse['Labels'][0]['Name'] == 'Human':
 
-                # Check to see if it's a celebrity
-                celeb = client.recognize_celebrities(
+                # Second, check to see if it's a celebrity
+                celebResponse = client.recognize_celebrities(
                     Image={
                         'Bytes': image,
                     }
                 )
-                print(celeb)
-
-                celebexist = True
+                print(celebResponse)
 
                 try:
-                    celeb['CelebrityFaces'][0]['Name']
+                    celebResponse['CelebrityFaces'][0]['Name']
+                    celebexist = True
                 except:
                     celebexist = False
 
                 # If a celebrity is found
                 if celebexist:
-
-                    celebname = celeb['CelebrityFaces'][0]['Name']
-                    celebconfidence = str(round(celeb['CelebrityFaces'][0]['Face']['Confidence'], 2))
-
-                    text = "This looks like a celebrity!  I\'m " + celebconfidence + " percent confident that I\'m looking at " + celebname + "."
-                    print(text)
+                    text = rekog.detectCelebrity(celebResponse)
 
                 # If not a celebrity, get details on the face
                 else:
-
-                    person = client.detect_faces(
+                    personResponse = client.detect_faces(
                         Image={
                             'Bytes': image,
                         },
@@ -56,58 +48,115 @@ class rekog():
                             'ALL',
                         ]
                     )
-                    print(person)
+                    print(personResponse)
 
-                    gender = person['FaceDetails'][0]['Gender']['Value']
-                    smiling = person['FaceDetails'][0]['Smile']['Value']
-                    emotion = str(person['FaceDetails'][0]['Emotions'][0]['Type']).lower()
-                    agelow = str(person['FaceDetails'][0]['AgeRange']['Low'])
-                    agehigh = str(person['FaceDetails'][0]['AgeRange']['High'])
+                    # Third, it's not a celebrity, so check to see if we can detect details about the face.
+                    try:
+                        personResponse['FaceDetails'][0]['AgeRange']
+                        faceExists = True
+                    except:
+                        faceExists = False
 
-                    if smiling:
-                        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they are ' + emotion + " and smiling. I think they are between " + agelow + " and " + agehigh + " years old."
+                    # Forth, if no face details are found, revert back to object definition, otherwise, tell us about the face.
+                    if faceExists:
+                        text = rekog.detectFace(personResponse)
                     else:
-                        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they are ' + emotion + " and are not smiling. I think they are between " + agelow + " and " + agehigh + " years old."
+                        text = rekog.detectObject(objectResponse)
 
-                    print(text)
-
-            # If it's not a person, return object details
+            # If it's not a person, return object details immediately
             else:
-                print(len(response['Labels']))
-                print(response)
-                object = str(response['Labels'][0]['Name']).lower()
-                confidence = str(round(response['Labels'][0]['Confidence'], 2))
+                text = rekog.detectObject(objectResponse)
 
-                numberofobjects = len(response['Labels'])
-
-                if numberofobjects > 1:
-                    if object[0] in ('a', 'e', 'i', 'o', 'u'):
-                        text = "Hmm... I am " + confidence + " percent sure there is an " + object
-                    else:
-                        text = "Hmm... I am " + confidence + " percent sure there is a " + object
-
-                    for i in range(1, numberofobjects):
-                        object = str(response['Labels'][i]['Name']).lower()
-                        confidence = str(round(response['Labels'][i]['Confidence'], 2))
-                        if object[0] in ('a', 'e', 'i', 'o', 'u'):
-                            text += "; " + confidence + " percent sure there is an " + object
-                        else:
-                            text += "; " + confidence + " percent sure there is a " + object
-
-                else:
-                    if object[0] in ('a', 'e', 'i', 'o', 'u'):
-                        text = "I\'m " + confidence + " percent sure I\'m looking at an " + object + "."
-                    else:
-                        text = "I\'m " + confidence + " percent sure I\'m looking at a " + object + "."
-                print(text)
-
-        # Nothing found at all
+        # Either nothing was found, or something went wrong.
         except:
             text = "I don\'t know what the hell I\'m looking at!"
             print(text)
 
         return polly.toS3(text, voice), text
 
+    @staticmethod
+    def detectObject(rekogInput):
+        print(rekogInput)
+        object = str(rekogInput['Labels'][0]['Name']).lower()
+        confidence = str(round(rekogInput['Labels'][0]['Confidence'], 2))
 
+        if len(rekogInput['Labels']) > 1:
+            text = "I am " + confidence + " percent sure there " + rekog.conjugateAndArticle(object) + " " + object
 
+            for i in range(1, len(rekogInput['Labels'])):
+                object = str(rekogInput['Labels'][i]['Name']).lower()
+                confidence = str(round(rekogInput['Labels'][i]['Confidence'], 2))
+
+                if i is len(rekogInput['Labels']) - 1:
+                    text += ", and " + confidence + " percent sure there " + rekog.conjugateAndArticle(object) + " " + object + "."
+                else:
+                    text += ", " + confidence + " percent sure there " + rekog.conjugateAndArticle(object) + " " + object
+
+        else:
+            text = "I\'m " + confidence + " percent sure what I\'m looking at " + rekog.conjugateAndArticle(object) + " " + object + "."
+        print(text)
+
+        return text
+
+    @staticmethod
+    def detectCelebrity(rekogInput):
+        celebname = rekogInput['CelebrityFaces'][0]['Name']
+        celebconfidence = str(round(rekogInput['CelebrityFaces'][0]['Face']['Confidence'], 2))
+
+        text = "This looks like a celebrity!  I\'m " + celebconfidence + " percent confident that this is " + celebname + "."
+        print(text)
+        return text
+
+    @staticmethod
+    def detectFace(rekogInput):
+        # Return boolean
+        smiling = rekogInput['FaceDetails'][0]['Smile']['Value']
+        eyeglasses = rekogInput['FaceDetails'][0]['Eyeglasses']['Value']
+        sunglasses = rekogInput['FaceDetails'][0]['Sunglasses']['Value']
+        beard = rekogInput['FaceDetails'][0]['Beard']['Value']
+        # Return string
+        gender = str(rekogInput['FaceDetails'][0]['Gender']['Value']).lower()
+        emotion = str(rekogInput['FaceDetails'][0]['Emotions'][0]['Type']).lower()
+        agelow = str(rekogInput['FaceDetails'][0]['AgeRange']['Low'])
+        agehigh = str(rekogInput['FaceDetails'][0]['AgeRange']['High'])
+
+        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they are ' + emotion + ". They "
+
+        if smiling:
+            text += "are smiling, "
+        else:
+            text += "are not smiling, "
+
+        if eyeglasses or sunglasses:
+            text += "are wearing glasses, "
+        else:
+            text += "are not wearing glasses, "
+
+        if gender == 'male':
+            if beard:
+                text += "and have a beard. "
+            else:
+                text += "and do not have a beard. "
+        elif gender == 'female':
+            if beard:
+                text += "and even though I think they are female, I also think they have a beard. Clearly I'm not very good at this."
+            else:
+                text += "and since they are female, it's pretty obvious they don't have a beard!"
+
+        text += " Also, they are probably between " + agelow + " and " + agehigh + " years old."
+
+        print(text)
+        return text
+
+    @staticmethod
+    def conjugateAndArticle(input):
+        if input[len(input) -1] is 's':
+            return 'are'
+        else:
+            if input[0] in ('a', 'e', 'i', 'o', 'u'):
+                print(len(input))
+                return 'is an'
+            else:
+                print(len(input))
+                return 'is a'
 
