@@ -81,19 +81,19 @@ class rekog():
         confidence = str(round(rekogInput['Labels'][0]['Confidence'], 1))
 
         if len(rekogInput['Labels']) > 1:
-            text = "I am " + confidence + " percent sure " + rekog.conjugateAndArticle(object) + " " + object
+            text = "I am " + confidence + " percent sure " + rekog.grammarise(object) + " " + object
 
             for i in range(1, len(rekogInput['Labels'])):
                 object = str(rekogInput['Labels'][i]['Name']).lower()
                 confidence = str(round(rekogInput['Labels'][i]['Confidence'], 1))
 
                 if i is len(rekogInput['Labels']) - 1:
-                    text += ", and " + confidence + " percent sure " + rekog.conjugateAndArticle(object) + " " + object + "."
+                    text += ", and " + confidence + " percent sure " + rekog.grammarise(object) + " " + object + "."
                 else:
-                    text += ", " + confidence + " percent sure " + rekog.conjugateAndArticle(object) + " " + object
+                    text += ", " + confidence + " percent sure " + rekog.grammarise(object) + " " + object
 
         else:
-            text = "I\'m " + confidence + " percent sure what I\'m looking at " + rekog.conjugateAndArticle(object) + " " + object + "."
+            text = "I\'m " + confidence + " percent sure what I\'m looking at " + rekog.grammarise(object) + " " + object + "."
         print(text)
 
         return text
@@ -149,7 +149,7 @@ class rekog():
         return text
 
     @staticmethod
-    def conjugateAndArticle(input):
+    def grammarise(input):
         l = len(input)
 
         # ----- Location ----

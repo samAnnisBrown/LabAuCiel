@@ -30,7 +30,7 @@
                         <button type="button" class="btn btn-lg btn-info"" onclick=rekognise() style="width: 300px">What am I lookin' at!?</button><br>
                         <select class="form-control" id="voice" style="width: 300px; display: block; margin:0 auto;">
                             {% for voice in voices %}
-                                {% if voice['Name'] == 'Geraint' %}
+                                {% if voice['Name'] == 'Brian' %}
                                     <option value='{{ voice['Name'] }}' selected>{{ voice['Name'] }}, {{ voice['LanguageName'] }}, {{ voice['Gender'] }}</option>
                                 {% elif 'English' in voice['LanguageName'] %}
                                     <option value='{{ voice['Id'] }}'>{{ voice['Name'] }}, {{ voice['LanguageName'] }}, {{ voice['Gender'] }}</option>
