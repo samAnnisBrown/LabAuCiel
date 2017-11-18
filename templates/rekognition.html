@@ -1,9 +1,20 @@
 {% extends "root.html" %}
 {% block content %}
+<style>
+    .table>tbody>tr>td,
+    .table>tbody>tr>th {
+        border-top: none;
+    }
+</style>
 <div style="width:95%; display: block; margin-left: auto; margin-right: auto">
     <tbody>
-        <table class="table" style="text-align:center;">
+        <table class="table" style="text-align:center; border-collapse: collapse">
             <tbody>
+                <tr>
+                    <td colspan="2">
+                        <button type="button" class="btn btn-default" onclick=changecamera() style="width: 150px">Change Camera</button>
+                    </td>
+                </tr>
                 <tr>
                     <td style="vertical-align: middle;">
                         <div><h3>Webcam Input</h3></div>
@@ -16,9 +27,8 @@
                 </tr>
                 <tr>
                     <td colspan="2">
-                        <button type="button" class="btn btn-success" onclick=rekognise() style="width: 250px">What am I lookin' at!?</button><br>
-                        <button type="button" class="btn btn-sm btn-default" onclick=changecamera() style="width: 250px">Change Camera</button>
-                        <select class="form-control" id="voice" style="width: 250px; display: block; margin:0 auto;">
+                        <button type="button" class="btn btn-info" onclick=rekognise() style="width: 300px">What am I lookin' at!?</button><br>
+                        <select class="form-control" id="voice" style="width: 300px; display: block; margin:0 auto;">
                             {% for voice in voices %}
                                 {% if voice['Name'] == 'Geraint' %}
                                     <option value='{{ voice['Name'] }}' selected>{{ voice['Name'] }}, {{ voice['LanguageName'] }}, {{ voice['Gender'] }}</option>
@@ -182,7 +192,14 @@ function changecamera() {
     }
 }
 
-window.onorientationchange = function() {
+function doOnOrientationChange() {
+    if (camera_direction = "outside") {
+        constraints = {
+            audio: false,
+            video: { deviceId: { exact: cameras[0]} }
+        }
+        document.getElementById("videoCanvas").innerHTML = "videoinput:"+cameras[0];
+
         video.addEventListener('playing', function() {
             document.getElementById("videoCanvas").width = this.videoWidth;
             document.getElementById("videoCanvas").height = this.videoHeight;
@@ -190,7 +207,30 @@ window.onorientationchange = function() {
             document.getElementById("outputCanvas").width = this.videoWidth - 20;
             document.getElementById("outputCanvas").height = this.videoHeight - 20;
         }, false);
-    };
+
+        navigator.mediaDevices.getUserMedia(constraints).
+          then(handleSuccess).catch(handleError);
+    } else {
+        constraints = {
+            audio: false,
+            video: { deviceId: { exact: cameras[1]} }
+        }
+        document.getElementById("videoCanvas").innerHTML = "videoinput:"+cameras[1];
+
+        video.addEventListener('playing', function() {
+            document.getElementById("videoCanvas").width = this.videoWidth;
+            document.getElementById("videoCanvas").height = this.videoHeight;
+
+            document.getElementById("outputCanvas").width = this.videoWidth - 20;
+            document.getElementById("outputCanvas").height = this.videoHeight - 20;
+        }, false);
+
+        navigator.mediaDevices.getUserMedia(constraints).
+          then(handleSuccess).catch(handleError);
+    }
+}
+
+window.addEventListener('orientationchange', doOnOrientationChange);
 
 </script>
 
