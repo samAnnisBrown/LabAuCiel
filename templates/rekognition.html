@@ -16,7 +16,8 @@
                 </tr>
                 <tr>
                     <td colspan="2">
-                        <button type="button" class="btn btn-success" onclick=rekognise() style="width: 250px">What am I lookin' at!?</button>
+                        <button type="button" class="btn btn-success" onclick=rekognise() style="width: 250px">What am I lookin' at!?</button><br>
+                        <button type="button" class="btn btn-warning" onclick=changecamera() style="width: 250px">Change Camera</button>
                         <select class="form-control" id="voice" style="width: 250px; display: block; margin:0 auto;">
                             {% for voice in voices %}
                                 {% if voice['Name'] == 'Geraint' %}
@@ -26,6 +27,7 @@
                                 {%  endif %}
                             {% endfor %}
                         </select>
+
                     </td>
                 </tr>
                 <tr>
@@ -39,9 +41,69 @@
 
 <script>
 // Grab elements, create settings, etc.
-var video = document.getElementById('videoCanvas');
+//var video = document.getElementById('videoCanvas');
+var video = document.querySelector('#videoCanvas');
+var cameras = [];
+var constraints = {};
+var camera_direction = "outside";
+
 // Get access to the camera!
-navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia || navigator.oGetUserMedia;
+video.setAttribute('autoplay', '');
+video.setAttribute('muted', '');
+video.setAttribute('playsinline', '');
+
+navigator.mediaDevices.enumerateDevices()
+  .then(gotDevices)
+  .catch(errorCallback);
+
+  function errorCallback() { console.log('dude, where is my devices');}
+
+  function gotDevices(deviceInfos) {
+
+  for (var i = 0; i !== deviceInfos.length; ++i) {
+    var deviceInfo = deviceInfos[i];
+    if (deviceInfo.kind === 'videoinput') {
+      cameras.push(deviceInfo.deviceId);
+      //console.log(deviceInfo);
+    }
+
+  }
+  constraints = {
+    audio: false,
+    video: { deviceId: { exact: cameras[0]} }
+  }
+
+  navigator.mediaDevices.getUserMedia(constraints).
+  then(handleSuccess).catch(handleError);
+
+}
+
+function handleSuccess(stream) {
+  window.stream = stream;
+  video.srcObject = stream;
+
+  video.addEventListener('playing', function() {
+  document.getElementById("videoCanvas").width = this.videoWidth;
+  document.getElementById("videoCanvas").height = this.videoHeight;
+
+  document.getElementById("outputCanvas").width = this.videoWidth - 20;
+  document.getElementById("outputCanvas").height = this.videoHeight - 20;
+  }, false);
+
+  video.play();
+}
+
+
+function handleError(error) {
+  console.log('navigator.getUserMedia error: ', error);
+}
+
+
+
+
+
+
+/*navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia || navigator.oGetUserMedia;
 
 if (navigator.getUserMedia) {
     navigator.getUserMedia({video: true}, handleVideo, videoError);
@@ -67,7 +129,7 @@ function handleVideo(stream) {
 
 function videoError(e) {
     // do something
-}
+}*/
 
 function rekognise() {
 // Get polly voice
@@ -94,6 +156,29 @@ function rekognise() {
             document.getElementById("regoktext").innerHTML = response['result'][1];
         }
        })
+}
+
+function changecamera() {
+  if (camera_direction == "outside") {
+    constraints = {
+      audio: false,
+      video: { deviceId: { exact: cameras[1]} }
+    }
+    document.getElementById("result").innerHTML = "videoinput:"+cameras[1];
+    navigator.mediaDevices.getUserMedia(constraints).
+    then(handleSuccess).catch(handleError);
+    camera_direction = "selfie";
+
+ } else {
+    camera_direction = "outside";
+    constraints = {
+        audio: false,
+        video: { deviceId: { exact: cameras[0]} }
+      }
+    document.getElementById("result").innerHTML = "videoinput:"+cameras[0];
+    navigator.mediaDevices.getUserMedia(constraints).
+      then(handleSuccess).catch(handleError);
+    }
 }
 
 </script>

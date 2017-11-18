@@ -156,7 +156,7 @@ class rekog():
             return 'are'
         elif input in {'people'}:
             return 'are some'
-        elif input in {'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora'}:
+        elif input in {'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora', 'grass', 'sky', 'pottery'}:
             return 'is some'
         elif input in {'inflatable'}:
             return 'is something'
