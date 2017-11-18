@@ -88,9 +88,9 @@ class rekog():
                 confidence = str(round(rekogInput['Labels'][i]['Confidence'], 2))
 
                 if i is len(rekogInput['Labels']) - 1:
-                    text += ", and " + confidence + " percent sure there " + rekog.conjugateAndArticle(object) + " " + object + "."
+                    text += ", and " + confidence + " percent sure " + rekog.conjugateAndArticle(object) + " " + object + "."
                 else:
-                    text += ", " + confidence + " percent sure there " + rekog.conjugateAndArticle(object) + " " + object
+                    text += ", " + confidence + " percent sure " + rekog.conjugateAndArticle(object) + " " + object
 
         else:
             text = "I\'m " + confidence + " percent sure what I\'m looking at " + rekog.conjugateAndArticle(object) + " " + object + "."
@@ -153,15 +153,26 @@ class rekog():
         l = len(input)
 
         if input[l - 1] is 's':
-            return 'are'
+            return 'there are'
+
+        elif input in {'nature', 'urban'}:
+            return 'this is'
+
+        elif input in {'bedroom', 'conference room'}:
+            return 'we are in a'
+
         elif input in {'people'}:
-            return 'are some'
-        elif input in {'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora', 'grass', 'sky', 'pottery'}:
-            return 'is some'
+            return 'there are some'
+
+        elif input in {'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora', 'grass', 'sky', 'pottery', 'modern art'}:
+            return 'there is some'
+
         elif input in {'inflatable'}:
-            return 'is something'
+            return 'there is something'
+
         elif input[l - 1] is 'n' and input[l - 2] is 'o' and input[l - 3] is 'i':
-            return 'is something to do with'
+            return 'there is something to do with'
+
         else:
             if input[0] in ('a', 'e', 'i', 'o', 'u'):
                 print(len(input))
