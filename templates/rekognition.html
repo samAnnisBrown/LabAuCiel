@@ -17,7 +17,7 @@
                 <tr>
                     <td colspan="2">
                         <button type="button" class="btn btn-success" onclick=rekognise() style="width: 250px">What am I lookin' at!?</button><br>
-                        <button type="button" class="btn btn-warning" onclick=changecamera() style="width: 250px">Change Camera</button>
+                        <button type="button" class="btn btn-sm btn-default" onclick=changecamera() style="width: 250px">Change Camera</button>
                         <select class="form-control" id="voice" style="width: 250px; display: block; margin:0 auto;">
                             {% for voice in voices %}
                                 {% if voice['Name'] == 'Geraint' %}
@@ -83,11 +83,11 @@ function handleSuccess(stream) {
   video.srcObject = stream;
 
   video.addEventListener('playing', function() {
-  document.getElementById("videoCanvas").width = this.videoWidth;
-  document.getElementById("videoCanvas").height = this.videoHeight;
+      document.getElementById("videoCanvas").width = this.videoWidth;
+      document.getElementById("videoCanvas").height = this.videoHeight;
 
-  document.getElementById("outputCanvas").width = this.videoWidth - 20;
-  document.getElementById("outputCanvas").height = this.videoHeight - 20;
+      document.getElementById("outputCanvas").width = this.videoWidth - 20;
+      document.getElementById("outputCanvas").height = this.videoHeight - 20;
   }, false);
 
   video.play();
@@ -97,39 +97,6 @@ function handleSuccess(stream) {
 function handleError(error) {
   console.log('navigator.getUserMedia error: ', error);
 }
-
-
-
-
-
-
-/*navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia || navigator.oGetUserMedia;
-
-if (navigator.getUserMedia) {
-    navigator.getUserMedia({video: true}, handleVideo, videoError);
-}
-
-function handleVideo(stream) {
-    if (window.webkitURL) {
-        video.src = window.webkitURL.createObjectURL(stream);
-    } else {
-        video.src = stream;
-    }
-
-    video.addEventListener('playing', function() {
-    document.getElementById("videoCanvas").width = this.videoWidth;
-    document.getElementById("videoCanvas").height = this.videoHeight;
-
-    document.getElementById("outputCanvas").width = this.videoWidth - 20;
-    document.getElementById("outputCanvas").height = this.videoHeight - 20;
-    }, false);
-
-    video.play();
-}
-
-function videoError(e) {
-    // do something
-}*/
 
 function rekognise() {
 // Get polly voice
@@ -164,7 +131,16 @@ function changecamera() {
       audio: false,
       video: { deviceId: { exact: cameras[1]} }
     }
-    document.getElementById("result").innerHTML = "videoinput:"+cameras[1];
+    document.getElementById("videoCanvas").innerHTML = "videoinput:"+cameras[1];
+
+    video.addEventListener('playing', function() {
+        document.getElementById("videoCanvas").width = this.videoWidth;
+        document.getElementById("videoCanvas").height = this.videoHeight;
+
+        document.getElementById("outputCanvas").width = this.videoWidth - 20;
+        document.getElementById("outputCanvas").height = this.videoHeight - 20;
+    }, false);
+
     navigator.mediaDevices.getUserMedia(constraints).
     then(handleSuccess).catch(handleError);
     camera_direction = "selfie";
@@ -175,7 +151,16 @@ function changecamera() {
         audio: false,
         video: { deviceId: { exact: cameras[0]} }
       }
-    document.getElementById("result").innerHTML = "videoinput:"+cameras[0];
+    document.getElementById("videoCanvas").innerHTML = "videoinput:"+cameras[0];
+
+    video.addEventListener('playing', function() {
+        document.getElementById("videoCanvas").width = this.videoWidth;
+        document.getElementById("videoCanvas").height = this.videoHeight;
+
+        document.getElementById("outputCanvas").width = this.videoWidth - 20;
+        document.getElementById("outputCanvas").height = this.videoHeight - 20;
+    }, false);
+
     navigator.mediaDevices.getUserMedia(constraints).
       then(handleSuccess).catch(handleError);
     }
