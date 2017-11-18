@@ -69,7 +69,7 @@ class rekog():
 
         # Either nothing was found, or something went wrong.
         except:
-            text = "I don\'t know what the hell I\'m looking at!"
+            text = "I don't know what the hell I'm looking at!"
             print(text)
 
         return polly.toS3(text, voice), text
@@ -81,19 +81,19 @@ class rekog():
         confidence = str(round(rekogInput['Labels'][0]['Confidence'], 1))
 
         if len(rekogInput['Labels']) > 1:
-            text = "I am " + confidence + " percent sure " + rekog.grammarise(object) + " " + object
+            text = "In this image, I am " + confidence + "% sure " + rekog.grammarise(object) + " " + object
 
             for i in range(1, len(rekogInput['Labels'])):
                 object = str(rekogInput['Labels'][i]['Name']).lower()
                 confidence = str(round(rekogInput['Labels'][i]['Confidence'], 1))
 
                 if i is len(rekogInput['Labels']) - 1:
-                    text += ", and " + confidence + " percent sure " + rekog.grammarise(object) + " " + object + "."
+                    text += ", and " + confidence + "% sure " + rekog.grammarise(object) + " " + object + "."
                 else:
-                    text += ", " + confidence + " percent sure " + rekog.grammarise(object) + " " + object
+                    text += ", " + confidence + "% sure " + rekog.grammarise(object) + " " + object
 
         else:
-            text = "I\'m " + confidence + " percent sure what I\'m looking at " + rekog.grammarise(object) + " " + object + "."
+            text = "I'm " + confidence + "% sure what I'm looking at " + rekog.grammarise(object) + " " + object + "."
         print(text)
 
         return text
@@ -103,7 +103,7 @@ class rekog():
         celebname = rekogInput['CelebrityFaces'][0]['Name']
         celebconfidence = str(round(rekogInput['CelebrityFaces'][0]['Face']['Confidence'], 1))
 
-        text = "This looks like a celebrity!  I\'m " + celebconfidence + " percent confident that this is " + celebname + "."
+        text = "This looks like a celebrity!  I'm " + celebconfidence + "% confident that this is " + celebname + "."
         print(text)
         return text
 
@@ -143,7 +143,7 @@ class rekog():
             else:
                 text += "and since they're female, it's pretty obvious they don't have a beard!"
 
-        text += "  Also, they are probably between " + agelow + " and " + agehigh + " years old."
+        text += "  Also, they are probably between " + agelow + ", and " + agehigh + " years old."
 
         print(text)
         return text
@@ -156,7 +156,7 @@ class rekog():
         if input in {'nature', 'urban'}:
             return 'this is'
 
-        elif input in {'bedroom', 'conference room', 'neighborhood'}:
+        elif input in {'bedroom', 'conference room', 'neighborhood', 'room'}:
             return 'we are in a'
 
         elif input in {'indoors', 'outdoors'}:
@@ -166,7 +166,7 @@ class rekog():
         elif input in {'people'}:
             return 'there are some'
 
-        elif input in {'pavement', 'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora', 'grass', 'sky', 'pottery', 'modern art', 'hardwood', 'asphalt', 'tarmac', 'lighting', 'wood'}:
+        elif input in {'alcohol', 'pavement', 'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora', 'grass', 'sky', 'pottery', 'modern art', 'hardwood', 'asphalt', 'tarmac', 'lighting', 'wood'}:
             return 'there is some'
 
         # ----- Actionable ----
@@ -174,17 +174,23 @@ class rekog():
             return 'there is something'
 
         # ----- Abstract ----
-        elif input[l - 1] is 'n' and input[l - 2] is 'o' and input[l - 3] is 'i' or input in {'architecture'}:
+        elif input[l - 1] is 'n' and input[l - 2] is 'o' and input[l - 3] is 'i' or input in {'architecture', 'interior design'}:
             return 'there is'
+
+        # ----- Plural Override -----
+        elif input in {'atlas'}:
+            return rekog.startsWithVowel(input)
 
         # ----- Plural ----
         elif input[l - 1] is 's':
             return 'there are'
 
         else:
-            if input[0] in ('a', 'e', 'i', 'o', 'u'):
-                return 'there is an'
-            else:
-                return 'there is a'
+            return rekog.startsWithVowel(input)
 
-
+    @staticmethod
+    def startsWithVowel(input):
+        if input[0] in ('a', 'e', 'i', 'o', 'u'):
+            return 'there is an'
+        else:
+            return 'there is a'
