@@ -152,32 +152,39 @@ class rekog():
     def conjugateAndArticle(input):
         l = len(input)
 
-        if input[l - 1] is 's':
-            return 'there are'
-
-        elif input in {'nature', 'urban'}:
+        # ----- Location ----
+        if input in {'nature', 'urban'}:
             return 'this is'
 
         elif input in {'bedroom', 'conference room'}:
             return 'we are in a'
 
+        elif input in {'indoors', 'outdoors'}:
+            return 'we are'
+
+        # ----- Collectives ----
         elif input in {'people'}:
             return 'there are some'
 
         elif input in {'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora', 'grass', 'sky', 'pottery', 'modern art'}:
             return 'there is some'
 
+        # ----- Actionable ----
         elif input in {'inflatable'}:
             return 'there is something'
 
+        # ----- Abstract ----
         elif input[l - 1] is 'n' and input[l - 2] is 'o' and input[l - 3] is 'i':
-            return 'there is something to do with'
+            return 'there is'
+
+        # ----- Plural ----
+        elif input[l - 1] is 's':
+            return 'there are'
 
         else:
             if input[0] in ('a', 'e', 'i', 'o', 'u'):
-                print(len(input))
-                return 'is an'
+                return 'there is an'
             else:
-                print(len(input))
-                return 'is a'
+                return 'there is a'
+
 
