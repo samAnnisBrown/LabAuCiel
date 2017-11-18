@@ -78,14 +78,14 @@ class rekog():
     def detectObject(rekogInput):
         print(rekogInput)
         object = str(rekogInput['Labels'][0]['Name']).lower()
-        confidence = str(round(rekogInput['Labels'][0]['Confidence'], 2))
+        confidence = str(round(rekogInput['Labels'][0]['Confidence'], 1))
 
         if len(rekogInput['Labels']) > 1:
-            text = "I am " + confidence + " percent sure there " + rekog.conjugateAndArticle(object) + " " + object
+            text = "I am " + confidence + " percent sure " + rekog.conjugateAndArticle(object) + " " + object
 
             for i in range(1, len(rekogInput['Labels'])):
                 object = str(rekogInput['Labels'][i]['Name']).lower()
-                confidence = str(round(rekogInput['Labels'][i]['Confidence'], 2))
+                confidence = str(round(rekogInput['Labels'][i]['Confidence'], 1))
 
                 if i is len(rekogInput['Labels']) - 1:
                     text += ", and " + confidence + " percent sure " + rekog.conjugateAndArticle(object) + " " + object + "."
@@ -101,7 +101,7 @@ class rekog():
     @staticmethod
     def detectCelebrity(rekogInput):
         celebname = rekogInput['CelebrityFaces'][0]['Name']
-        celebconfidence = str(round(rekogInput['CelebrityFaces'][0]['Face']['Confidence'], 2))
+        celebconfidence = str(round(rekogInput['CelebrityFaces'][0]['Face']['Confidence'], 1))
 
         text = "This looks like a celebrity!  I\'m " + celebconfidence + " percent confident that this is " + celebname + "."
         print(text)
@@ -120,17 +120,17 @@ class rekog():
         agelow = str(rekogInput['FaceDetails'][0]['AgeRange']['Low'])
         agehigh = str(rekogInput['FaceDetails'][0]['AgeRange']['High'])
 
-        text = 'I\'m pretty sure this person is ' + gender + ', and it looks like they are ' + emotion + ". They "
+        text = "I'm pretty sure this person is " + gender + ", and it looks like they're " + emotion + ". They "
 
         if smiling:
             text += "are smiling, "
         else:
-            text += "are not smiling, "
+            text += "aren't smiling, "
 
         if eyeglasses or sunglasses:
             text += "are wearing glasses, "
         else:
-            text += "are not wearing glasses, "
+            text += "aren't wearing glasses, "
 
         if gender == 'male':
             if beard:
@@ -139,11 +139,11 @@ class rekog():
                 text += "and do not have a beard. "
         elif gender == 'female':
             if beard:
-                text += "and even though I think they are female, I also think they have a beard. Clearly I'm not very good at this."
+                text += "and even though I think they're female, I also think they have a beard. Clearly I'm not very good at this."
             else:
-                text += "and since they are female, it's pretty obvious they don't have a beard!"
+                text += "and since they're female, it's pretty obvious they don't have a beard!"
 
-        text += " Also, they are probably between " + agelow + " and " + agehigh + " years old."
+        text += "  Also, they are probably between " + agelow + " and " + agehigh + " years old."
 
         print(text)
         return text
@@ -156,7 +156,7 @@ class rekog():
         if input in {'nature', 'urban'}:
             return 'this is'
 
-        elif input in {'bedroom', 'conference room'}:
+        elif input in {'bedroom', 'conference room', 'neighborhood'}:
             return 'we are in a'
 
         elif input in {'indoors', 'outdoors'}:
@@ -166,7 +166,7 @@ class rekog():
         elif input in {'people'}:
             return 'there are some'
 
-        elif input in {'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora', 'grass', 'sky', 'pottery', 'modern art'}:
+        elif input in {'pavement', 'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora', 'grass', 'sky', 'pottery', 'modern art', 'hardwood', 'asphalt', 'tarmac', 'lighting', 'wood'}:
             return 'there is some'
 
         # ----- Actionable ----
@@ -174,7 +174,7 @@ class rekog():
             return 'there is something'
 
         # ----- Abstract ----
-        elif input[l - 1] is 'n' and input[l - 2] is 'o' and input[l - 3] is 'i':
+        elif input[l - 1] is 'n' and input[l - 2] is 'o' and input[l - 3] is 'i' or input in {'architecture'}:
             return 'there is'
 
         # ----- Plural ----
