@@ -100,6 +100,7 @@ function handleError(error) {
 
 function rekognise() {
 // Get polly voice
+    var ios = !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform);
     document.getElementById("regoktext").innerHTML = "Gimme a sec... Just trying to figure out what this is!";
     var pollyVoice = document.getElementById('voice').value;
 
@@ -113,7 +114,20 @@ function rekognise() {
     var image = canvas.toDataURL("image/jpeg");
 
     // Get details from server
-    $.ajax({
+    if (ios) {
+        $.ajax({
+            type: "POST",
+            url: '/rekognise',
+            async: false,
+            data: {'data': image, 'voice': pollyVoice},
+            success: function(response){
+                var audio = new Audio(response['result'][0]);
+                audio.play();
+                document.getElementById("regoktext").innerHTML = response['result'][1];
+            }
+           })
+    } else {
+        $.ajax({
         type: "POST",
         url: '/rekognise',
         data: {'data': image, 'voice': pollyVoice},
@@ -123,6 +137,8 @@ function rekognise() {
             document.getElementById("regoktext").innerHTML = response['result'][1];
         }
        })
+    }
+
 }
 
 function changecamera() {
@@ -165,6 +181,16 @@ function changecamera() {
       then(handleSuccess).catch(handleError);
     }
 }
+
+window.onorientationchange = function() {
+        video.addEventListener('playing', function() {
+            document.getElementById("videoCanvas").width = this.videoWidth;
+            document.getElementById("videoCanvas").height = this.videoHeight;
+
+            document.getElementById("outputCanvas").width = this.videoWidth - 20;
+            document.getElementById("outputCanvas").height = this.videoHeight - 20;
+        }, false);
+    };
 
 </script>
 
