@@ -15,7 +15,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>
+                    <td colspan="2">
                         <button type="button" class="btn btn-success" onclick=rekognise() style="width: 250px">What am I lookin' at!?</button>
                         <select class="form-control" id="voice" style="width: 250px; display: block; margin:0 auto;">
                             {% for voice in voices %}
@@ -26,9 +26,6 @@
                                 {%  endif %}
                             {% endfor %}
                         </select>
-                    </td>
-                    <td>
-
                     </td>
                 </tr>
                 <tr>
@@ -51,7 +48,11 @@ if (navigator.getUserMedia) {
 }
 
 function handleVideo(stream) {
-    video.src = window.URL.createObjectURL(stream);
+    if (window.webkitURL) {
+        video.src = window.webkitURL.createObjectURL(stream);
+    } else {
+        video.src = stream;
+    }
 
     video.addEventListener('playing', function() {
     document.getElementById("videoCanvas").width = this.videoWidth;
@@ -60,6 +61,8 @@ function handleVideo(stream) {
     document.getElementById("outputCanvas").width = this.videoWidth - 20;
     document.getElementById("outputCanvas").height = this.videoHeight - 20;
     }, false);
+
+    video.play();
 }
 
 function videoError(e) {

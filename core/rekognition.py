@@ -150,8 +150,18 @@ class rekog():
 
     @staticmethod
     def conjugateAndArticle(input):
-        if input[len(input) -1] is 's':
+        l = len(input)
+
+        if input[l - 1] is 's':
             return 'are'
+        elif input in {'people'}:
+            return 'are some'
+        elif input in {'furniture', 'art', 'computer hardware', 'hardware', 'housing', 'flora'}:
+            return 'is some'
+        elif input in {'inflatable'}:
+            return 'is something'
+        elif input[l - 1] is 'n' and input[l - 2] is 'o' and input[l - 3] is 'i':
+            return 'is something to do with'
         else:
             if input[0] in ('a', 'e', 'i', 'o', 'u'):
                 print(len(input))
