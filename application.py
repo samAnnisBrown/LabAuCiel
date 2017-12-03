@@ -12,7 +12,7 @@ from core.reporting import *
 from core.config import get_region_friendlyname
 
 # Logging
-#logging.basicConfig(filename='/tmp/labauciel.log', level=logging.DEBUG)
+##logging.basicConfig(filename='/tmp/labauciel.log', level=logging.DEBUG)
 
 application = Flask(__name__)
 
