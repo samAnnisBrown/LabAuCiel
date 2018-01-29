@@ -1,0 +1,48 @@
+{
+  "Version": "2008-10-17",
+  "Id": "Policy1335892530063",
+  "Statement": [
+    {
+      "Sid": "Stmt1335892150622",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "386209384616"
+      },
+      "Action": [
+        "s3:GetBucketAcl",
+        "s3:GetBucketPolicy"
+      ],
+      "Resource": "arn:aws:s3:::sportsbet-billing-data"
+    },
+    {
+      "Sid": "Stmt1335892526596",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "386209384616"
+      },
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::sportsbet-billing-data/*"
+    },
+    {
+      "Sid": "AWSEnterpriseSupport-ListAccess",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "386209384616"
+      },
+      "Action": [
+        "s3:GetBucketAcl",
+        "s3:GetBucketPolicy"
+      ],
+      "Resource": "arn:aws:s3:::sportsbet-billing-data"
+    },
+    {
+      "Sid": "AWSEnterpriseSupport-GetAcess",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "386209384616"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::sportsbet-billing-data/*"
+    }
+  ]
+}
