@@ -24,22 +24,23 @@
       "Resource": "arn:aws:s3:::sportsbet-billing-data/*"
     },
     {
-      "Sid": "AWSEnterpriseSupport-ListAccess",
+      "Sid": "AWS-Support-BucketReadAccess",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "386209384616"
+        "AWS": "618252783261"
       },
       "Action": [
+        "s3:ListBucket",
         "s3:GetBucketAcl",
         "s3:GetBucketPolicy"
       ],
       "Resource": "arn:aws:s3:::sportsbet-billing-data"
     },
     {
-      "Sid": "AWSEnterpriseSupport-GetAcess",
+      "Sid": "AWS-Support-ObjectReadAccess",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "386209384616"
+        "AWS": "618252783261"
       },
       "Action": "s3:GetObject",
       "Resource": "arn:aws:s3:::sportsbet-billing-data/*"

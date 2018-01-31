@@ -1,0 +1,49 @@
+{
+  "Version": "2008-10-17",
+  "Id": "Policy1335892530063",
+  "Statement": [
+  {
+    "Sid": "Stmt1335892150622",
+    "Effect": "Allow",
+    "Principal": {
+      "AWS": "386209384616"
+    },
+    "Action": ["s3:GetBucketAcl", "s3:GetBucketPolicy"],
+    "Resource": "arn:aws:s3:::rmit-billing-reports"
+  },
+  {
+    "Sid": "Stmt1335892526596",
+    "Effect": "Allow",
+    "Principal": {
+      "AWS": "386209384616"
+    },
+    "Action": "s3:PutObject",
+    "Resource": "arn:aws:s3:::rmit-billing-reports/*"
+  },
+  {
+    "Sid": "Stmt1335892526599",
+    "Effect": "Allow",
+    "Principal": {
+      "AWS": "618252783261"
+    },
+    "Action": [
+      "s3:ListBucket",
+      "s3:GetBucketAcl",
+      "s3:GetBucketPolicy"
+    ],
+    "Resource": "arn:aws:s3:::rmit-billing-reports"
+  },
+  {
+    "Sid": "Stmt1335892526577",
+    "Effect": "Allow",
+    "Principal": {
+      "AWS": "618252783261"
+    },
+    "Action": [
+      "s3:GetObject",
+      "s3:GetObjectAcl"
+    ],
+    "Resource": "arn:aws:s3:::rmit-billing-reports/*"
+  }
+  ]
+}

@@ -1,0 +1,8 @@
+wmic diskdrive get size,deviceid
+
+
+
+dd if=\\.\PHYSICALDRIVE1 of=/dev/null bs=1M --progress --size
+
+
+fio --filename=\\.\PHYSICALDRIVE2  --rw=read --bs=128k --iodepth=32 --direct=1 --name=volume-initialize
