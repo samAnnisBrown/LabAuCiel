@@ -9,23 +9,26 @@ from elasticsearch import helpers
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from aws_requests_auth.aws_auth import AWSRequestsAuth
 from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
+from time import sleep
 
 # Global Variables
-esHost = "search-wwes-75dyceauwq2lk6pg3kf5w4254y.ap-southeast-2.es.amazonaws.com"   # Elasticsearch Domain
+esHost = "vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com"   # Elasticsearch Domain
 uploadToEs = True               # Set to false for dry-run (will not impact ES domain)
 lambdaAuth = True               # Set to True if running in a Lambda function
 totalLinesUploadedCount = 0     # Do not modify
 totalLinesCount = 0             # Do not modify
 
 
-def handler(event, context):
+def lambda_handler(event, context):
+
+    sleep(3) # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
 
     # Retrieve S3 object from event
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = event["Records"][0]["s3"]["object"]["key"]
 
     # Download S3 file
-    s3 = boto3.client('s3')
+    s3 = boto3.client('s3', region_name='ap-southeast-2') # Region needs to be set due to S3 VPC Endpoint routing
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
     # Unzip into memory
@@ -33,10 +36,14 @@ def handler(event, context):
     bytestream = BytesIO(s3file['Body'].read())
     outfile = GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
 
-    # Build Index Name
-    reportMonth = re.search(".*/(\d+-\d+)/", key).group(1).split("-")[0][:-2]
-    reportName = (re.search(".*/(.+?)/\d+-\d+/", key)).group(1)
-    indexName = ("cur-" + str(reportName) + "-" + str(reportMonth)).lower()
+    # Build Index Name - if triggered from default CUR key, will include year/month - otherwise, only filename
+    try:
+        reportMonth = re.search(".*/(\d+-\d+)/", key).group(1).split("-")[0][:-2]
+        reportName = (re.search(".*/(.+?)/\d+-\d+/", key)).group(1)
+        indexName = ("cur-" + str(reportName) + "-" + str(reportMonth)).lower()
+    except:
+        keyName = (re.search("(.+.)csv.gz", key)).group(1)
+        indexName = ("cur-adoc-" + str(keyName).lower())
 
     # Remove existing index with same name (to avoid duplicate entries)
     if uploadToEs is True:

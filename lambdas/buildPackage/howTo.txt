@@ -1,0 +1,5 @@
+From this dir
+
+- Place the lambda function
+- Update requirements.txt
+- pip install -r requirements.txt -t.

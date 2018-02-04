@@ -8,7 +8,7 @@ from elasticsearch import Elasticsearch, RequestsHttpConnection
 from aws_requests_auth.aws_auth import AWSRequestsAuth
 
 # Global Variables
-esHost = "search-wildwest-elasticsearch-3odybwxjscnkxgvkdtoz4hdc2y.ap-southeast-2.es.amazonaws.com"
+esHost = "vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com"
 uploadToEs = True
 
 
