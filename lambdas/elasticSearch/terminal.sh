@@ -18,7 +18,7 @@ curl -XPOST 'search-ww-es-6-m6req6yocsam2tnhjxw2hvqo5m.ap-southeast-2.es.amazona
 curl -XGET 'search-wwes-75dyceauwq2lk6pg3kf5w4254y.ap-southeast-2.es.amazonaws.com/_cat/indices?v&pretty'
 
 # Delete Index
-curl -XDELETE 'search-wwes-75dyceauwq2lk6pg3kf5w4254y.ap-southeast-2.es.amazonaws.com/cbr-daily-cost-report-201711?pretty'
+curl -XDELETE 'vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com/cbr-daily-cost-report-201711?pretty'
 
 lineItem_Operation:RunInstances* AND lineItem_UsageType:*BoxUsage*
 

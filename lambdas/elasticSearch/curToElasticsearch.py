@@ -2,6 +2,8 @@ import csv
 import boto3
 import os
 import re
+import sys
+import requests
 
 from gzip import GzipFile
 from io import BytesIO
@@ -18,6 +20,11 @@ lambdaAuth = True               # Set to True if running in a Lambda function
 totalLinesUploadedCount = 0     # Do not modify
 totalLinesCount = 0             # Do not modify
 
+if sys.argv.__len__() > 1:
+    if sys.argv[1] == 'list':
+        response = requests.get('http://' + esHost + '/_cat/indices?v&pretty')
+        print(response.text)
+
 
 def lambda_handler(event, context):
 
@@ -29,10 +36,12 @@ def lambda_handler(event, context):
 
     # Download S3 file
     s3 = boto3.client('s3', region_name='ap-southeast-2') # Region needs to be set due to S3 VPC Endpoint routing
+    print('Downloading file from S3...')
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
     # Unzip into memory
     # TODO use scratch space on disk instead? Lambda has only 500Mb though :(
+    print('Unzipping into memory - depending on the size of the CUR, this could take a while...')
     bytestream = BytesIO(s3file['Body'].read())
     outfile = GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
 
@@ -74,6 +83,14 @@ def lambda_handler(event, context):
             forceFloat = [index for index, string in enumerate(payloadKeys) if 'UsageAmount' in string
                           or 'lended' in string
                           or 'SizeFactor' in string
+                          or 'Amortized' in string
+                          or 'Unused' in string
+                          or 'EffectiveCost' in string
+                          or 'TotalReserved' in string
+                          or 'NormalizedUnitsPerReservation' in string
+                          or 'NumberOfReservations' in string
+                          or 'UnitsPerReservation' in string
+                          or 'UpfrontValue' in string
                           or 'OnDemand' in string]
 
         else:
@@ -169,7 +186,7 @@ def returnElasticsearchAuth():
 
 
 if not lambdaAuth:  # If not in a Lambda, launch main function and pass S3 event JSON
-    handler({
+    lambda_handler({
         "Records": [
             {
                 "s3": {
