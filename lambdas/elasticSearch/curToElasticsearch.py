@@ -20,15 +20,10 @@ lambdaAuth = True               # Set to True if running in a Lambda function
 totalLinesUploadedCount = 0     # Do not modify
 totalLinesCount = 0             # Do not modify
 
-if sys.argv.__len__() > 1:
-    if sys.argv[1] == 'list':
-        response = requests.get('http://' + esHost + '/_cat/indices?v&pretty')
-        print(response.text)
-
 
 def lambda_handler(event, context):
-
-    sleep(3) # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
+    print('Running main import function')
+    sleep(3)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
 
     # Retrieve S3 object from event
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
@@ -185,16 +180,24 @@ def returnElasticsearchAuth():
     return es
 
 
+if sys.argv.__len__() > 1:
+    if sys.argv[1] == 'list':
+        response = requests.get('http://' + esHost + '/_cat/indices?v&pretty')
+        print(response.text)
+
 if not lambdaAuth:  # If not in a Lambda, launch main function and pass S3 event JSON
+    print('lambdaAuth set to False')
+    bucket = "ansamual-costreports"
+    key = "QuickSight_RedShift/QuickSight_RedShift_CostReports/20171201-20180101/1934845f-ade9-404e-b3c0-84eee5a729d4/QuickSight_RedShift_CostReports-1.csv.gz"
     lambda_handler({
         "Records": [
             {
                 "s3": {
                     "bucket": {
-                        "name": "ansamual-costreports",
+                        "name": bucket,
                     },
                     "object": {
-                        "key": "QuickSight_RedShift/QuickSight_RedShift_CostReports/20171201-20180101/1934845f-ade9-404e-b3c0-84eee5a729d4/QuickSight_RedShift_CostReports-1.csv.gz",
+                        "key": key,
                     }
                 }
             }
