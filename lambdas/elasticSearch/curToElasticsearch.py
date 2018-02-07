@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import requests
+import argparse
 
 from gzip import GzipFile
 from io import BytesIO
@@ -14,15 +15,20 @@ from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
 from time import sleep
 
 # Global Variables
-esHost = "vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com"   # Elasticsearch Domain
-uploadToEs = True               # Set to false for dry-run (will not impact ES domain)
-lambdaAuth = True               # Set to True if running in a Lambda function
+parser = argparse.ArgumentParser(description="Testing, 123.")
+parser.add_argument('-es', '--elasticsearch_endpoint', default='vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com', help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
+parser.add_argument('-nl', '--no_lambda_auth', help="Uses standard BOTO authentication methods instead of Lambda IAM roles.", action='store_true')
+parser.add_argument('-d', '--dryrun', action='store_true', help='Show output of upload without impacting Elasticsearch cluster.')
+args = parser.parse_args()
+print(args.dryrun)
+print(args.elasticsearch_endpoint)
+
 totalLinesUploadedCount = 0     # Do not modify
 totalLinesCount = 0             # Do not modify
 
 
 def lambda_handler(event, context):
-    print('Running main import function')
+    print('Running main import/lambda function')
     sleep(3)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
 
     # Retrieve S3 object from event
@@ -50,7 +56,7 @@ def lambda_handler(event, context):
         indexName = ("cur-adoc-" + str(keyName).lower())
 
     # Remove existing index with same name (to avoid duplicate entries)
-    if uploadToEs is True:
+    if args.dryrun is False:
         deleteElasticsearchIndex(indexName)
 
     # Prepare variables
@@ -133,7 +139,7 @@ def uploadToElasticsearch(actions):
 
     global totalLinesUploadedCount
 
-    if uploadToEs:
+    if args.dryrun is False:
         es = returnElasticsearchAuth()
         totalLinesUploadedCount += len(actions)
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
@@ -163,16 +169,16 @@ def returnElasticsearchAuth():
         awsauth = AWSRequestsAuth(aws_access_key=os.environ['AWS_ACCESS_KEY_ID'],
                                   aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
                                   aws_token=os.environ['AWS_SESSION_TOKEN'],
-                                  aws_host=esHost,
+                                  aws_host=args.elasticsearch_endpointost,
                                   aws_region='ap-southeast-2',
                                   aws_service='es')
     else:
         # If running outside of a Lambda function, retrieve creds using standard BOTO logic
-        awsauth = BotoAWSRequestsAuth(aws_host=esHost,
+        awsauth = BotoAWSRequestsAuth(aws_host=args.elasticsearch_endpoint,
                                       aws_region='ap-southeast-2',
                                       aws_service='es')
 
-    es = Elasticsearch(host=esHost,
+    es = Elasticsearch(host=args.elasticsearch_endpoint,
                        port=80,
                        connection_class=RequestsHttpConnection,
                        http_auth=awsauth)
@@ -182,13 +188,14 @@ def returnElasticsearchAuth():
 
 if sys.argv.__len__() > 1:
     if sys.argv[1] == 'list':
-        response = requests.get('http://' + esHost + '/_cat/indices?v&pretty')
+        response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
         print(response.text)
 
-if not lambdaAuth:  # If not in a Lambda, launch main function and pass S3 event JSON
+if args.no_lambda_auth:  # If not in a Lambda, launch main function and pass S3 event JSON
     print('lambdaAuth set to False')
     bucket = "ansamual-costreports"
     key = "QuickSight_RedShift/QuickSight_RedShift_CostReports/20171201-20180101/1934845f-ade9-404e-b3c0-84eee5a729d4/QuickSight_RedShift_CostReports-1.csv.gz"
+    print('Downloading \"' + bucket + '/' + key + '\" from S3')
     lambda_handler({
         "Records": [
             {
@@ -203,3 +210,5 @@ if not lambdaAuth:  # If not in a Lambda, launch main function and pass S3 event
             }
         ]
     }, "")
+
+print('End of file...')
