@@ -19,12 +19,19 @@ parser = argparse.ArgumentParser(description="Testing, 123.")
 parser.add_argument('-es', '--elasticsearch_endpoint', default='vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com', help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
 parser.add_argument('-nl', '--no_lambda_auth', help="Uses standard BOTO authentication methods instead of Lambda IAM roles.", action='store_true')
 parser.add_argument('-d', '--dryrun', action='store_true', help='Show output of upload without impacting Elasticsearch cluster.')
+parser.add_argument('-l', '--list', action='store_true', help='Lists the indices described by the --elasticsearch_endpoint parameter.')
 args = parser.parse_args()
 print(args.dryrun)
 print(args.elasticsearch_endpoint)
 
 totalLinesUploadedCount = 0     # Do not modify
 totalLinesCount = 0             # Do not modify
+
+if args.list:
+    response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
+    print(response.text)
+    print('Exiting...')
+    sys.exit()
 
 
 def lambda_handler(event, context):
@@ -184,12 +191,6 @@ def returnElasticsearchAuth():
                        http_auth=awsauth)
 
     return es
-
-
-if sys.argv.__len__() > 1:
-    if sys.argv[1] == 'list':
-        response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
-        print(response.text)
 
 if args.no_lambda_auth:  # If not in a Lambda, launch main function and pass S3 event JSON
     print('lambdaAuth set to False')
