@@ -24,6 +24,9 @@ parser.add_argument('--index_list', action='store_true',
                     help='Lists the indices described by the --elasticsearch_endpoint parameter.')
 parser.add_argument('--index_delete',
                     help='Deletes an Elasticsearch index.  Enter the index name to delete')
+# Auto uploading of CUR data
+parser.add_argument('--latest')
+
 # Ad-hoc uploading of CUR data
 parser.add_argument('--cur_load',
                     action='store_true',
@@ -55,22 +58,7 @@ def lambda_handler(event, context):
     key = event["Records"][0]["s3"]["object"]["key"]
 
     # Download S3 file
-    if args.role_arn is not None:
-        client = boto3.client('sts')
-        assumed_role = client.assume_role(
-            RoleArn=args.role_arn,
-            RoleSessionName='cur_temp_sts_session'
-        )
-
-        creds = assumed_role['Credentials']
-
-        s3 = boto3.client('s3',
-                            region_name='ap-southeast-2',
-                            aws_access_key_id=creds['AccessKeyId'],
-                            aws_secret_access_key=creds['SecretAccessKey'],
-                            aws_session_token=creds['SessionToken'], )
-    else:
-        s3 = boto3.client('s3', region_name='ap-southeast-2')
+    s3 = returnS3Auth()
 
     print('Downloading \"' + bucket + '/' + key + '\" from S3')
     s3file = s3.get_object(Bucket=bucket, Key=key)
@@ -219,6 +207,25 @@ def returnElasticsearchAuth():
 
     return es
 
+def returnS3Auth():
+    if args.role_arn is not None:
+        client = boto3.client('sts')
+        assumed_role = client.assume_role(
+            RoleArn=args.role_arn,
+            RoleSessionName='cur_temp_sts_session'
+        )
+
+        creds = assumed_role['Credentials']
+
+        s3 = boto3.client('s3',
+                          region_name='ap-southeast-2',
+                          aws_access_key_id=creds['AccessKeyId'],
+                          aws_secret_access_key=creds['SecretAccessKey'],
+                          aws_session_token=creds['SessionToken'], )
+    else:
+        s3 = boto3.client('s3', region_name='ap-southeast-2')
+
+    return s3
 
 # Index Functions
 if args.index_list:
@@ -234,28 +241,13 @@ if args.index_delete:
     sys.exit()
 
 # Load Functions
-# if args.cur_load:
-#     if args.role_arn is not None:
-#         client = boto3.client('sts')
-#         assumed_role = client.assume_role(
-#             RoleArn=args.role_arn,
-#             RoleSessionName='tempsession'
-#         )
-#
-#         creds = assumed_role['Credentials']
-#
-#         s3 = boto3.resource('s3',
-#                             aws_access_key_id=creds['AccessKeyId'],
-#                             aws_secret_access_key=creds['SecretAccessKey'],
-#                             aws_session_token=creds['SessionToken'], )
-#     else:
-#         s3 = boto3.resource('s3')
-#
-#     bucket = s3.Bucket(name=args.bucket)
-#     for s3object in bucket.objects.all():
-#         print(s3object)
-#
-#     sys.exit()
+if args.latest:
+    s3 = returnS3Auth()
+    bucket = s3.Bucket(name=args.bucket)
+    for s3object in bucket.objects.all():
+        print(s3object)
+
+    sys.exit()
 
 if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
     if args.bucket is None or args.key is None:
@@ -275,5 +267,3 @@ if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event 
                 }
             ]
         }, "")
-
-print('End of file...')
