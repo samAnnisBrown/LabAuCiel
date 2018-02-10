@@ -25,7 +25,8 @@ parser.add_argument('--index_list', action='store_true',
 parser.add_argument('--index_delete',
                     help='Deletes an Elasticsearch index.  Enter the index name to delete')
 # Auto uploading of CUR data
-parser.add_argument('--latest')
+parser.add_argument('--latest',
+                    action='store_true')
 
 # Ad-hoc uploading of CUR data
 parser.add_argument('--cur_load',
