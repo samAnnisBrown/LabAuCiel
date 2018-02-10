@@ -49,8 +49,9 @@ if args.index_delete:
     print('Deleting index ' + args.delete_index)
     response = requests.delete('http://' + args.elasticsearch_endpoint + '/' + args.delete_index + '?pretty')
     print(response.text)
+    sys.exit()
 
-if args.load:
+if args.cur_load:
     try:
         args.role_arn
         client = boto3.client('sts')
