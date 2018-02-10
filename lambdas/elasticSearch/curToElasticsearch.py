@@ -26,11 +26,9 @@ parser.add_argument('--index_delete', help='Deletes an Elasticsearch index.  Ent
 
 parser.add_argument('--cur_load', action='store_true')
 parser.add_argument('--role_arn', help='If using STS auth, the ARN of the role to be assumed.')
-parser.add_argument('--bucket', default='ansamual-costreports',
-                    help='The S3 Bucket that contains the import CUR .csv.gz file.')
-parser.add_argument('--key', default='cur.csv.gz', help='The S3 Bucket that contains the import CUR .csv.gz file.')
-parser.add_argument('--dryrun', action='store_true',
-                    help='Show output of upload without impacting Elasticsearch cluster.')
+parser.add_argument('--bucket', help='The S3 Bucket that contains the import CUR .csv.gz file.')
+parser.add_argument('--key', help='The S3 Bucket that contains the import CUR .csv.gz file.')
+parser.add_argument('--dryrun', action='store_true', help='Show output of upload without impacting Elasticsearch cluster.')
 
 args = parser.parse_args()
 
@@ -70,7 +68,7 @@ if args.cur_load:
 
     bucket = s3.Bucket(name=args.bucket)
     for s3object in bucket.objects.all():
-        print(s3object)
+        print(s3object['key'])
 
     sys.exit()
 
