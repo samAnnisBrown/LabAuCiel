@@ -22,13 +22,21 @@ parser.add_argument('--elasticsearch_endpoint',
 
 parser.add_argument('--index_list', action='store_true',
                     help='Lists the indices described by the --elasticsearch_endpoint parameter.')
-parser.add_argument('--index_delete', help='Deletes an Elasticsearch index.  Enter the index name to delete')
+parser.add_argument('--index_delete',
+                    help='Deletes an Elasticsearch index.  Enter the index name to delete')
 
-parser.add_argument('--cur_load', action='store_true')
-parser.add_argument('--role_arn', help='If using STS auth, the ARN of the role to be assumed.')
-parser.add_argument('--bucket', help='The S3 Bucket that contains the import CUR .csv.gz file.')
-parser.add_argument('--key', help='The S3 Bucket that contains the import CUR .csv.gz file.')
-parser.add_argument('--dryrun', action='store_true', help='Show output of upload without impacting Elasticsearch cluster.')
+parser.add_argument('--cur_load',
+                    action='store_true',
+                    help='Manually load CUR data (use this parameter if script is not a Lambda function triggered by S3).  Requires --bucket and --key to be set showing the location of the CUR .csv.gz file.  Use --role_arn if using STS to assume the role in another account, otherwise standard local BOTO3 auth attempts will be used.')
+parser.add_argument('--role_arn',
+                    help='If using STS auth, the ARN of the role to be assumed.')
+parser.add_argument('--bucket',
+                    help='The S3 Bucket that contains the import CUR .csv.gz file.')
+parser.add_argument('--key',
+                    help='The S3 Bucket that contains the import CUR .csv.gz file.')
+parser.add_argument('--dryrun',
+                    action='store_true',
+                    help='Show output of upload without impacting Elasticsearch cluster.')
 
 args = parser.parse_args()
 
@@ -214,6 +222,7 @@ def returnElasticsearchAuth():
 
     return es
 
+
 # Index Functions
 if args.index_list:
     response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
@@ -257,7 +266,6 @@ if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event 
         print('key=' + args.key)
         print('set bucket or key')
     else:
-        print('Downloading \"' + args.bucket + '/' + args.key + '\" from S3')
         lambda_handler({
             "Records": [
                 {
