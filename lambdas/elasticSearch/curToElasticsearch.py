@@ -245,7 +245,7 @@ if args.index_delete:
 if args.latest:
     s3 = returnS3Auth()
     get_last_modified = lambda obj: int(obj['LastModified'].strftime('%s'))
-    objs = s3.list_objects_v2(Bucket='my_bucket')['Contents']
+    objs = s3.list_objects_v2(Bucket=args.bucket)['Contents']
     [obj['Key'] for obj in sorted(objs, key=get_last_modified)]
     print(objs[0])
 
