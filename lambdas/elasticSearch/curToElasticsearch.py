@@ -247,7 +247,8 @@ if args.latest:
     get_last_modified = lambda obj: int(obj['LastModified'].strftime('%s'))
     objs = s3.list_objects_v2(Bucket=args.bucket)['Contents']
     [obj['Key'] for obj in sorted(objs, key=get_last_modified)]
-    print(objs)
+    for obj in objs:
+        print(obj['Key'] + " " + obj['LastModified'])
 
     sys.exit()
 
