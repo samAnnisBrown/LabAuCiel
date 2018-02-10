@@ -246,9 +246,9 @@ if args.latest:
     s3 = returnS3Auth()
     get_last_modified = lambda obj: int(obj['LastModified'].strftime('%s'))
     objects = s3.list_objects_v2(Bucket=args.bucket)['Contents']
-    latest = [objects['Key'] for obj in sorted(objects, key=get_last_modified)]
+    #latest = [objects['Key'] for obj in sorted(objects, key=get_last_modified)]
     #s3object = s3.get_object(Bucket=args.bucket, Key=lastUpdatedKey)
-    print(latest)
+    print(objects)
 
     sys.exit()
 
