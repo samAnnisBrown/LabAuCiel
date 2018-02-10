@@ -56,7 +56,7 @@ if args.cur_load:
         args.role_arn
         client = boto3.client('sts')
         assumed_role = client.assume_role(
-            RoleArn=args.rolearn,
+            RoleArn=args.role_arn,
             RoleSessionName='tempsession'
         )
 
