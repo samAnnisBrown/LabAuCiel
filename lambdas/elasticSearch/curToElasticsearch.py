@@ -16,63 +16,77 @@ from time import sleep
 
 # Argument Creation
 parser = argparse.ArgumentParser(description="Testing, 123.")
-parser.add_argument('-es', '--elasticsearch_endpoint', default='vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com', help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
-parser.add_argument('-nl', '--no_lambda_auth', help="Uses standard BOTO authentication methods instead of Lambda IAM roles.", action='store_true')
-parser.add_argument('-d', '--dryrun', action='store_true', help='Show output of upload without impacting Elasticsearch cluster.')
-parser.add_argument('-l', '--list', action='store_true', help='Lists the indices described by the --elasticsearch_endpoint parameter.')
-parser.add_argument('-di', '--delete_index', help='Deletes an Elasticsearch index.  Enter the index name to delete')
-parser.add_argument('-b', '--bucket', default='ansamual-costreports', help='The S3 Bucket that contains the import CUR .csv.gz file.  Use in conjunction with --no_lambda_auth')
-parser.add_argument('-k', '--key', default='cur.csv.gz', help='The S3 Bucket that contains the import CUR .csv.gz file.  Use in conjunction with --no_lambda_auth')
-parser.add_argument('--download', action='store_true')
-parser.add_argument('--rolearn')
+parser.add_argument('--elasticsearch_endpoint',
+                    default='vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com',
+                    help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
+
+parser.add_argument('--index_list', action='store_true',
+                    help='Lists the indices described by the --elasticsearch_endpoint parameter.')
+parser.add_argument('--index_delete', help='Deletes an Elasticsearch index.  Enter the index name to delete')
+
+parser.add_argument('--cur_load', action='store_true')
+parser.add_argument('--role_arn', help='If using STS auth, the ARN of the role to be assumed.')
+parser.add_argument('--bucket', default='ansamual-costreports',
+                    help='The S3 Bucket that contains the import CUR .csv.gz file.')
+parser.add_argument('--key', default='cur.csv.gz', help='The S3 Bucket that contains the import CUR .csv.gz file.')
+parser.add_argument('--dryrun', action='store_true',
+                    help='Show output of upload without impacting Elasticsearch cluster.')
+
 args = parser.parse_args()
 
 # Global Variables
-totalLinesUploadedCount = 0     # Do not modify
-totalLinesCount = 0             # Do not modify
+totalLinesUploadedCount = 0  # Do not modify
+totalLinesCount = 0  # Do not modify
 
 # Elasticsearch Argument Logic
-if args.list:
+if args.index_list:
     response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
     print(response.text)
     print('Finished listing - Existing...')
     sys.exit()
 
-if args.delete_index:
+if args.index_delete:
     print('Deleting index ' + args.delete_index)
     response = requests.delete('http://' + args.elasticsearch_endpoint + '/' + args.delete_index + '?pretty')
     print(response.text)
 
-if args.download:
-    client = boto3.client('sts')
-    assumed_role = client.assume_role(
-        RoleArn=args.rolearn,
-        RoleSessionName='tempsession'
-    )
+if args.load:
+    try:
+        args.role_arn
+        client = boto3.client('sts')
+        assumed_role = client.assume_role(
+            RoleArn=args.rolearn,
+            RoleSessionName='tempsession'
+        )
 
-    creds = assumed_role['Credentials']
+        creds = assumed_role['Credentials']
 
-    s3 = boto3.client('s3',
-                        aws_access_key_id=creds['AccessKeyId'],
-                        aws_secret_access_key=creds['SecretAccessKey'],
-                        aws_session_token=creds['SessionToken'], )
+        s3 = boto3.resource('s3',
+                            aws_access_key_id=creds['AccessKeyId'],
+                            aws_secret_access_key=creds['SecretAccessKey'],
+                            aws_session_token=creds['SessionToken'], )
+    except NameError:
+        s3 = boto3.resource('s3')
 
-    response = s3.list_objects_v2(Bucket=args.bucket)
-    print(response)
+    bucket = s3.Bucket(name=args.bucket)
+    for s3object in bucket.objects.all():
+        print(s3object)
 
     sys.exit()
+
 
 # Lambda/Main Import Function
 def lambda_handler(event, context):
     print('Running main import/lambda function')
-    sleep(3)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
+    sleep(
+        3)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
 
     # Retrieve S3 object from event
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = event["Records"][0]["s3"]["object"]["key"]
 
     # Download S3 file
-    s3 = boto3.client('s3', region_name='ap-southeast-2') # Region needs to be set due to S3 VPC Endpoint routing
+    s3 = boto3.client('s3', region_name='ap-southeast-2')  # Region needs to be set due to S3 VPC Endpoint routing
     print('Downloading file from S3...')
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
@@ -104,7 +118,7 @@ def lambda_handler(event, context):
     for count, line in enumerate(outfile.splitlines(), 1):
 
         if count == 1:  # Header Row: retrieve field names
-            payloadKeysIn = list(csv.reader([line]))[0] # need to encapsulate/decapsulate list for csv.reader to work
+            payloadKeysIn = list(csv.reader([line]))[0]  # need to encapsulate/decapsulate list for csv.reader to work
 
             # Replace '/' with '_' for field names.  Makes life easier in Elasticsearch
             payloadKeys = []
@@ -153,7 +167,8 @@ def lambda_handler(event, context):
 
             # Verify that the output row length equals the header row length (otherwise we have a column mismatch)
             if len(payloadValuesOut) != len(payloadKeys):
-                print("Line " + str(count) + " is " + str(len(payloadValuesOut)) + ". Should be " + str(len(payloadKeys)) + "." + " -- " + str(payloadValuesOut))
+                print("Line " + str(count) + " is " + str(len(payloadValuesOut)) + ". Should be " + str(
+                    len(payloadKeys)) + "." + " -- " + str(payloadValuesOut))
             else:
                 # Created the individual line payload
                 payload = dict(zip(payloadKeys, payloadValuesOut))
@@ -172,7 +187,6 @@ def lambda_handler(event, context):
 
 
 def uploadToElasticsearch(actions):
-
     global totalLinesUploadedCount
 
     if args.dryrun is False:
@@ -181,11 +195,13 @@ def uploadToElasticsearch(actions):
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
 
         helpers.bulk(es, actions)
-        print("Uploaded " + str(len(actions)) + " lines  - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded. (" + str(percent) + "%)")
+        print("Uploaded " + str(len(actions)) + " lines  - " + str(totalLinesUploadedCount) + " of " + str(
+            totalLinesCount) + " lines uploaded. (" + str(percent) + "%)")
     else:
         totalLinesUploadedCount += len(actions)
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
-        print("Upload set to 'False'.  Would've uploaded " + str(len(actions)) + " lines -  " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded. (" + str(percent) + "%)")
+        print("Upload set to 'False'.  Would've uploaded " + str(len(actions)) + " lines -  " + str(
+            totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded. (" + str(percent) + "%)")
 
 
 def listElasticsearchIndices():
@@ -199,8 +215,7 @@ def deleteElasticsearchIndex(indexName):
 
 
 def returnElasticsearchAuth():
-
-    if not args.no_lambda_auth:
+    if not args.cur_load:
         # Retrieve Access details (Lambda IAM role must have access to ES domain to work)
         awsauth = AWSRequestsAuth(aws_access_key=os.environ['AWS_ACCESS_KEY_ID'],
                                   aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
@@ -222,7 +237,7 @@ def returnElasticsearchAuth():
     return es
 
 
-if args.no_lambda_auth:  # If not in a Lambda, launch main function and pass S3 event JSON
+if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
     print('Downloading \"' + args.bucket + '/' + args.key + '\" from S3')
     lambda_handler({
         "Records": [
