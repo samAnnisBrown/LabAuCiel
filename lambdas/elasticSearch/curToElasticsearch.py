@@ -34,7 +34,7 @@ totalLinesCount = 0             # Do not modify
 if args.list:
     response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
     print(response.text)
-    print('Exiting...')
+    print('Finished listing - Existing...')
     sys.exit()
 
 if args.download:
