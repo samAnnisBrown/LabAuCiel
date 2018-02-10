@@ -19,12 +19,12 @@ parser = argparse.ArgumentParser(description="Testing, 123.")
 parser.add_argument('--elasticsearch_endpoint',
                     default='vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com',
                     help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
-
+# Working with Indexes
 parser.add_argument('--index_list', action='store_true',
                     help='Lists the indices described by the --elasticsearch_endpoint parameter.')
 parser.add_argument('--index_delete',
                     help='Deletes an Elasticsearch index.  Enter the index name to delete')
-
+# Ad-hoc uploading of CUR data
 parser.add_argument('--cur_load',
                     action='store_true',
                     help='Manually load CUR data (use this parameter if script is not a Lambda function triggered by S3).  Requires --bucket and --key to be set showing the location of the CUR .csv.gz file.  Use --role_arn if using STS to assume the role in another account, otherwise standard local BOTO3 auth attempts will be used.')
@@ -47,9 +47,8 @@ totalLinesCount = 0  # Do not modify
 
 # Lambda/Main Import Function
 def lambda_handler(event, context):
-    print('Running main import/lambda function')
-    sleep(
-        3)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
+    print('Running main import function')
+    sleep(3)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
 
     # Retrieve S3 object from event
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
@@ -164,7 +163,7 @@ def lambda_handler(event, context):
 
                 # If linesToUpload is > 1000, complete a bulk upload
                 if len(linesToUpload) >= 1000:
-                    uploadToElasticsearch(linesToUpload)
+                    uploadToElasticsearch(linesToUpload, indexName)
                     linesToUpload = []
 
     # If there are any lines left once loop is completed, upload them.
@@ -172,7 +171,7 @@ def lambda_handler(event, context):
         uploadToElasticsearch(linesToUpload)
 
 
-def uploadToElasticsearch(actions):
+def uploadToElasticsearch(actions, indexName):
     global totalLinesUploadedCount
 
     if args.dryrun is False:
@@ -181,13 +180,11 @@ def uploadToElasticsearch(actions):
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
 
         helpers.bulk(es, actions)
-        print("Uploaded " + str(len(actions)) + " lines  - " + str(totalLinesUploadedCount) + " of " + str(
-            totalLinesCount) + " lines uploaded. (" + str(percent) + "%)")
+        print("Uploaded " + str(len(actions)) + " lines  - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)")
     else:
         totalLinesUploadedCount += len(actions)
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
-        print("Upload set to 'False'.  Would've uploaded " + str(len(actions)) + " lines -  " + str(
-            totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded. (" + str(percent) + "%)")
+        print("Upload set to 'False'.  Would've uploaded " + str(len(actions)) + " lines -  " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)")
 
 
 def listElasticsearchIndices():
@@ -262,9 +259,7 @@ if args.index_delete:
 
 if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
     if args.bucket is None or args.key is None:
-        print('bucket=' + args.bucket)
-        print('key=' + args.key)
-        print('set bucket or key')
+        print('Set both --bucket and --key need to location of the CUR file in S3 you want to import.')
     else:
         lambda_handler({
             "Records": [
