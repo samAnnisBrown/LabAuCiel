@@ -252,7 +252,7 @@ if args.index_delete:
 #     sys.exit()
 
 if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
-    if args.bucket or args.key is None:
+    if args.bucket is None or args.key is None:
         print('bucket=' + args.bucket)
         print('key=' + args.key)
         print('set bucket or key')
