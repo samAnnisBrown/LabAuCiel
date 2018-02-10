@@ -52,7 +52,7 @@ if args.index_delete:
     sys.exit()
 
 if args.cur_load:
-    if args.role_arn != "":
+    if args.role_arn is not None:
         client = boto3.client('sts')
         assumed_role = client.assume_role(
             RoleArn=args.role_arn,
