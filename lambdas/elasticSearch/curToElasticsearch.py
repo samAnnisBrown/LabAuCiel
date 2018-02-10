@@ -39,8 +39,9 @@ if args.list:
     sys.exit()
 
 if args.delete_index:
-    print('We want to delete an index I think')
-    print(args.delete_index)
+    print('Deleting index ' + args.delete_index)
+    response = requests.delete('http://' + args.elasticsearch_endpoint + '/' + args.delete_index + '?pretty')
+    print(response.text)
 
 if args.download:
     client = boto3.client('sts')
