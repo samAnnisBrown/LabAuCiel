@@ -168,7 +168,7 @@ def lambda_handler(event, context):
 
     # If there are any lines left once loop is completed, upload them.
     if len(linesToUpload) > 0:
-        uploadToElasticsearch(linesToUpload)
+        uploadToElasticsearch(linesToUpload, indexName)
 
 
 def uploadToElasticsearch(actions, indexName):
