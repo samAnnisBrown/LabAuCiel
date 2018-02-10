@@ -52,8 +52,7 @@ if args.index_delete:
     sys.exit()
 
 if args.cur_load:
-    try:
-        args.role_arn
+    if args.role_arn != "":
         client = boto3.client('sts')
         assumed_role = client.assume_role(
             RoleArn=args.role_arn,
@@ -66,7 +65,7 @@ if args.cur_load:
                             aws_access_key_id=creds['AccessKeyId'],
                             aws_secret_access_key=creds['SecretAccessKey'],
                             aws_session_token=creds['SessionToken'], )
-    except NameError:
+    else:
         s3 = boto3.resource('s3')
 
     bucket = s3.Bucket(name=args.bucket)
