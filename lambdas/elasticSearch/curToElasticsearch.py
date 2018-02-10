@@ -14,26 +14,49 @@ from aws_requests_auth.aws_auth import AWSRequestsAuth
 from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
 from time import sleep
 
-# Global Variables
+# Argument Creation
 parser = argparse.ArgumentParser(description="Testing, 123.")
 parser.add_argument('-es', '--elasticsearch_endpoint', default='vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com', help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
 parser.add_argument('-nl', '--no_lambda_auth', help="Uses standard BOTO authentication methods instead of Lambda IAM roles.", action='store_true')
 parser.add_argument('-d', '--dryrun', action='store_true', help='Show output of upload without impacting Elasticsearch cluster.')
 parser.add_argument('-l', '--list', action='store_true', help='Lists the indices described by the --elasticsearch_endpoint parameter.')
+parser.add_argument('-b', '--bucket', default='ansamual-costreports', help='The S3 Bucket that contains the import CUR .csv.gz file.  Use in conjunction with --no_lambda_auth')
+parser.add_argument('-k', '--key', default='cur.csv.gz', help='The S3 Bucket that contains the import CUR .csv.gz file.  Use in conjunction with --no_lambda_auth')
+parser.add_argument('--download', action='store_true')
+parser.add_argument('--rolearn')
 args = parser.parse_args()
-print(args.dryrun)
-print(args.elasticsearch_endpoint)
 
+# Global Variables
 totalLinesUploadedCount = 0     # Do not modify
 totalLinesCount = 0             # Do not modify
 
+# Elasticsearch Argument Logic
 if args.list:
     response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
     print(response.text)
     print('Exiting...')
     sys.exit()
 
+if args.download:
+    client = boto3.client('sts')
+    assumed_role = client.assume_role(
+        RoleArn=args.rolearn,
+        RoleSessionName='tempsession'
+    )
 
+    creds = assumed_role['Credentials']
+
+    s3 = boto3.client('s3',
+                        aws_access_key_id=creds['AccessKeyId'],
+                        aws_secret_access_key=creds['SecretAccessKey'],
+                        aws_session_token=creds['SessionToken'], )
+
+    response = s3.list_objects_v2(Bucket=args.bucket)
+    print(response)
+
+    sys.exit()
+
+# Lambda/Main Import Function
 def lambda_handler(event, context):
     print('Running main import/lambda function')
     sleep(3)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
@@ -171,7 +194,7 @@ def deleteElasticsearchIndex(indexName):
 
 def returnElasticsearchAuth():
 
-    if lambdaAuth:
+    if not args.no_lambda_auth:
         # Retrieve Access details (Lambda IAM role must have access to ES domain to work)
         awsauth = AWSRequestsAuth(aws_access_key=os.environ['AWS_ACCESS_KEY_ID'],
                                   aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
@@ -192,20 +215,18 @@ def returnElasticsearchAuth():
 
     return es
 
+
 if args.no_lambda_auth:  # If not in a Lambda, launch main function and pass S3 event JSON
-    print('lambdaAuth set to False')
-    bucket = "ansamual-costreports"
-    key = "QuickSight_RedShift/QuickSight_RedShift_CostReports/20171201-20180101/1934845f-ade9-404e-b3c0-84eee5a729d4/QuickSight_RedShift_CostReports-1.csv.gz"
-    print('Downloading \"' + bucket + '/' + key + '\" from S3')
+    print('Downloading \"' + args.bucket + '/' + args.key + '\" from S3')
     lambda_handler({
         "Records": [
             {
                 "s3": {
                     "bucket": {
-                        "name": bucket,
+                        "name": args.bucket,
                     },
                     "object": {
-                        "key": key,
+                        "key": args.key,
                     }
                 }
             }
