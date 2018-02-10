@@ -36,42 +36,6 @@ args = parser.parse_args()
 totalLinesUploadedCount = 0  # Do not modify
 totalLinesCount = 0  # Do not modify
 
-# Elasticsearch Argument Logic
-if args.index_list:
-    response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
-    print(response.text)
-    print('Finished listing - Existing...')
-    sys.exit()
-
-if args.index_delete:
-    print('Deleting index ' + args.delete_index)
-    response = requests.delete('http://' + args.elasticsearch_endpoint + '/' + args.delete_index + '?pretty')
-    print(response.text)
-    sys.exit()
-
-if args.cur_load:
-    if args.role_arn is not None:
-        client = boto3.client('sts')
-        assumed_role = client.assume_role(
-            RoleArn=args.role_arn,
-            RoleSessionName='tempsession'
-        )
-
-        creds = assumed_role['Credentials']
-
-        s3 = boto3.resource('s3',
-                            aws_access_key_id=creds['AccessKeyId'],
-                            aws_secret_access_key=creds['SecretAccessKey'],
-                            aws_session_token=creds['SessionToken'], )
-    else:
-        s3 = boto3.resource('s3')
-
-    bucket = s3.Bucket(name=args.bucket)
-    for s3object in bucket.objects.all():
-        print(s3object['key'])
-
-    sys.exit()
-
 
 # Lambda/Main Import Function
 def lambda_handler(event, context):
@@ -84,8 +48,24 @@ def lambda_handler(event, context):
     key = event["Records"][0]["s3"]["object"]["key"]
 
     # Download S3 file
-    s3 = boto3.client('s3', region_name='ap-southeast-2')  # Region needs to be set due to S3 VPC Endpoint routing
-    print('Downloading file from S3...')
+    if args.role_arn is not None:
+        client = boto3.client('sts')
+        assumed_role = client.assume_role(
+            RoleArn=args.role_arn,
+            RoleSessionName='cur_temp_sts_session'
+        )
+
+        creds = assumed_role['Credentials']
+
+        s3 = boto3.client('s3',
+                            region_name='ap-southeast-2',
+                            aws_access_key_id=creds['AccessKeyId'],
+                            aws_secret_access_key=creds['SecretAccessKey'],
+                            aws_session_token=creds['SessionToken'], )
+    else:
+        s3 = boto3.client('s3', region_name='ap-southeast-2')
+
+    print('Downloading \"' + bucket + '/' + key + '\" from S3')
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
     # Unzip into memory
@@ -234,22 +214,61 @@ def returnElasticsearchAuth():
 
     return es
 
+# Index Functions
+if args.index_list:
+    response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
+    print(response.text)
+    print('Finished listing - Existing...')
+    sys.exit()
+
+if args.index_delete:
+    print('Deleting index ' + args.delete_index)
+    response = requests.delete('http://' + args.elasticsearch_endpoint + '/' + args.delete_index + '?pretty')
+    print(response.text)
+    sys.exit()
+
+# Load Functions
+# if args.cur_load:
+#     if args.role_arn is not None:
+#         client = boto3.client('sts')
+#         assumed_role = client.assume_role(
+#             RoleArn=args.role_arn,
+#             RoleSessionName='tempsession'
+#         )
+#
+#         creds = assumed_role['Credentials']
+#
+#         s3 = boto3.resource('s3',
+#                             aws_access_key_id=creds['AccessKeyId'],
+#                             aws_secret_access_key=creds['SecretAccessKey'],
+#                             aws_session_token=creds['SessionToken'], )
+#     else:
+#         s3 = boto3.resource('s3')
+#
+#     bucket = s3.Bucket(name=args.bucket)
+#     for s3object in bucket.objects.all():
+#         print(s3object)
+#
+#     sys.exit()
 
 if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
-    print('Downloading \"' + args.bucket + '/' + args.key + '\" from S3')
-    lambda_handler({
-        "Records": [
-            {
-                "s3": {
-                    "bucket": {
-                        "name": args.bucket,
-                    },
-                    "object": {
-                        "key": args.key,
+    if args.bucket or args.key is None:
+        print('set bucket or key')
+    else:
+        print('Downloading \"' + args.bucket + '/' + args.key + '\" from S3')
+        lambda_handler({
+            "Records": [
+                {
+                    "s3": {
+                        "bucket": {
+                            "name": args.bucket,
+                        },
+                        "object": {
+                            "key": args.key,
+                        }
                     }
                 }
-            }
-        ]
-    }, "")
+            ]
+        }, "")
 
 print('End of file...')
