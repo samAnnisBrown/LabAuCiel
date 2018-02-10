@@ -59,7 +59,6 @@ def lambda_handler(event, context):
 
     # Download S3 file
     s3 = returnS3Auth()
-
     print('Downloading \"' + bucket + '/' + key + '\" from S3')
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
@@ -80,6 +79,7 @@ def lambda_handler(event, context):
 
     # Remove existing index with same name (to avoid duplicate entries)
     if args.dryrun is False:
+        print('Removing index ' + indexName + " to ensure there are no duplicates...")
         deleteElasticsearchIndex(indexName)
 
     # Prepare variables
@@ -244,8 +244,10 @@ if args.index_delete:
 if args.latest:
     s3 = returnS3Auth()
     bucket = s3.Bucket(name=args.bucket)
-    for s3object in bucket.objects.all():
-        print(s3object)
+    orderedList = sorted(bucket, key=lambda k: k.last_modified)
+    lastUpdatedKey = orderedList[-1]
+    s3object = s3.get_object(Bucket=args.bucket, Key=lastUpdatedKey)
+    print(s3object)
 
     sys.exit()
 
