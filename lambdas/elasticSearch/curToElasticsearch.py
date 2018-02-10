@@ -245,10 +245,10 @@ if args.index_delete:
 if args.latest:
     s3 = returnS3Auth()
     bucket = s3.list_objects_v2(Bucket=args.bucket)
-    #orderedList = sorted(bucket, key=lambda k: k.last_modified)
-    #lastUpdatedKey = orderedList[-1]
+    orderedList = sorted(bucket, key=lambda k: k.last_modified)
+    lastUpdatedKey = orderedList[-1]
     #s3object = s3.get_object(Bucket=args.bucket, Key=lastUpdatedKey)
-    print(bucket)
+    print(lastUpdatedKey)
 
     sys.exit()
 
