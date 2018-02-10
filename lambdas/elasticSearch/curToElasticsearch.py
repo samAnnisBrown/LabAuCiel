@@ -20,6 +20,7 @@ parser.add_argument('-es', '--elasticsearch_endpoint', default='vpc-aws-cost-ana
 parser.add_argument('-nl', '--no_lambda_auth', help="Uses standard BOTO authentication methods instead of Lambda IAM roles.", action='store_true')
 parser.add_argument('-d', '--dryrun', action='store_true', help='Show output of upload without impacting Elasticsearch cluster.')
 parser.add_argument('-l', '--list', action='store_true', help='Lists the indices described by the --elasticsearch_endpoint parameter.')
+parser.add_argument('-di', '--delete_index', help='Deletes an Elasticsearch index.  Enter the index name to delete')
 parser.add_argument('-b', '--bucket', default='ansamual-costreports', help='The S3 Bucket that contains the import CUR .csv.gz file.  Use in conjunction with --no_lambda_auth')
 parser.add_argument('-k', '--key', default='cur.csv.gz', help='The S3 Bucket that contains the import CUR .csv.gz file.  Use in conjunction with --no_lambda_auth')
 parser.add_argument('--download', action='store_true')
@@ -36,6 +37,10 @@ if args.list:
     print(response.text)
     print('Finished listing - Existing...')
     sys.exit()
+
+if args.delete_index:
+    print('We want to delete an index I think')
+    print(args.delete_index)
 
 if args.download:
     client = boto3.client('sts')
