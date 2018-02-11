@@ -91,9 +91,8 @@ def lambda_handler(event, context):
     # Build Index Name - if triggered from default CUR key, will include year/month - otherwise, only filename
     try:
         reportMonth = re.search(".*/(\d+-\d+)/", key).group(1).split("-")[0][:-2]
-        print('key ' + key)
-        reportName = (re.search("(.+?)/", key)).group(1)
-        print(reportName)
+        # reportName = (re.search("(.+?)/", key)).group(1)
+        reportName = bucket.lower()
         indexName = ("cur-" + str(reportName) + "-" + str(reportMonth)).lower()
     except:
         keyName = (re.search("(.+.)csv.gz", key)).group(1)
