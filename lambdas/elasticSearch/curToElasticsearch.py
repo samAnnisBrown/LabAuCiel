@@ -1,10 +1,12 @@
 import csv
+
 import boto3
 import os
 import re
 import sys
 import requests
 import argparse
+import operator
 
 from gzip import GzipFile
 from io import BytesIO
@@ -24,9 +26,16 @@ parser.add_argument('--index_list', action='store_true',
                     help='Lists the indices described by the --elasticsearch_endpoint parameter.')
 parser.add_argument('--index_delete',
                     help='Deletes an Elasticsearch index.  Enter the index name to delete')
+
 # Auto uploading of CUR data
-parser.add_argument('--latest',
+parser.add_argument('--customer',
+                    help='Customer - i.e. RMIT, Sportsbet')
+parser.add_argument('--available_months',
                     action='store_true')
+parser.add_argument('--minus_month',
+                    type=int,
+                    default=0,
+                    help='')
 
 # Ad-hoc uploading of CUR data
 parser.add_argument('--cur_load',
@@ -43,6 +52,15 @@ parser.add_argument('--dryrun',
                     help='Show output of upload without impacting Elasticsearch cluster.')
 
 args = parser.parse_args()
+
+if args.customer.lower() == 'rmit':
+    args.role_arn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
+    args.bucket = 'rmit-billing-reports'
+    args.cur_load = True
+    folderSearch = 'CUR/Hourly'
+    customerImport = True
+else:
+    customerImport = False
 
 # Global Variables
 totalLinesUploadedCount = 0  # Do not modify
@@ -208,6 +226,7 @@ def returnElasticsearchAuth():
 
     return es
 
+
 def returnS3Auth():
     if args.role_arn is not None:
         client = boto3.client('sts')
@@ -242,15 +261,51 @@ if args.index_delete:
     sys.exit()
 
 # Load Functions
-if args.latest:
+if customerImport:
+    # Create dit/list
+    curFiles = {}
+    outputList = []
+    reportsList = []
+    # Get S3 Auth
     s3 = returnS3Auth()
-    #get_last_modified = lambda obj: int(obj['LastModified'].strftime('%s'))
-    objs = s3.list_objects_v2(Bucket=args.bucket)['Contents']
-    #[obj['Key'] for obj in sorted(objs, key=get_last_modified)]
-    for obj in objs:
-        print(obj['Key'] + " " + str(obj['LastModified']))
+    # Get s3 objects and display length
+    listObjectsOutput = s3.list_objects_v2(Bucket=args.bucket)
+    #print('S3 objects retrieved in this call: ' + str(len(listObjectsOutput['Contents'])))
+    # While the list is truncated, keep calling an appending to outputList
+    while listObjectsOutput['IsTruncated']:
+        outputList.append(listObjectsOutput)
+        listObjectsOutput = s3.list_objects_v2(Bucket=args.bucket, ContinuationToken=listObjectsOutput['NextContinuationToken'])
+        #print('S3 objects retrieved in this call: ' + str(len(listObjectsOutput['Contents'])))
+    outputList.append(listObjectsOutput)
 
-    sys.exit()
+    # Let's make a new list that only contains CUR files (csv.gz)
+    for listObjectsOutput in outputList:
+        for s3Object in listObjectsOutput['Contents']:
+            if 'csv.gz' in s3Object['Key'] and folderSearch in s3Object['Key']:
+                curFiles[s3Object['Key']] = s3Object['LastModified'].isoformat()
+                # Create a list of all the different folders (i.e. months) where we might want to find the 'latest'
+                try:
+                    searchKey = re.search("(.+/\d+-\d+)/", s3Object['Key']).group(1)
+                    if searchKey not in reportsList:
+                        reportsList.append(searchKey)
+                except AttributeError:
+                    searchKey = None
+
+    if args.available_months:
+        for report in reportsList:
+            print(report)
+        sys.exit()
+
+    print('Total Number of csv.gz files before: ' + str(len(curFiles)))
+    # Remove all keys that don't below to the appropriate month
+    keysToDelete = [k for k, v in curFiles.items() if sorted(reportsList, reverse=True)[args.minus_month] not in k]
+    for key in keysToDelete:
+        del curFiles[key]
+    print('Total Number of csv.gz files: ' + str(len(curFiles)))
+
+    sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
+    print(sortedCur[0][0])
+    args.key = sortedCur[0][0]
 
 if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
     if args.bucket is None or args.key is None:
