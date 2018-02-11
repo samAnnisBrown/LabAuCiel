@@ -53,13 +53,14 @@ parser.add_argument('--dryrun',
 
 args = parser.parse_args()
 
-if args.customer.lower() == 'rmit':
-    args.role_arn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
-    args.bucket = 'rmit-billing-reports'
-    args.cur_load = True
-    folderSearch = 'CUR/Hourly'
-    customerImport = True
-else:
+try:
+    if args.customer.lower() == 'rmit':
+        args.role_arn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
+        args.bucket = 'rmit-billing-reports'
+        args.cur_load = True
+        folderSearch = 'CUR/Hourly'
+        customerImport = True
+except AttributeError:
     customerImport = False
 
 # Global Variables
