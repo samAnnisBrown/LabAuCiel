@@ -304,7 +304,7 @@ if customerImport:
     print('Total Number of csv.gz files: ' + str(len(curFiles)))
 
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
-    print(sortedCur[0][0])
+    print('File ' + sortedCur[0][0] + ' chosen with date ' + sortedCur[0][1])
     args.key = sortedCur[0][0]
 
 if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
