@@ -171,7 +171,7 @@ def lambda_handler(event, context):
                 linesToUpload.append({"_index": indexName, "_type": "CostReport", "_source": payload})
 
                 # If linesToUpload is > 1000, complete a bulk upload
-                if len(linesToUpload) >= 10000:
+                if len(linesToUpload) >= 5000:
                     uploadToElasticsearch(linesToUpload, indexName)
                     linesToUpload = []
 
