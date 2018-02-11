@@ -31,11 +31,11 @@ parser.add_argument('-c', '--customer',
                     help='Customer - i.e. RMIT, Sportsbet')
 parser.add_argument('-am', '--available_months',
                     action='store_true',
-                    help='Lists the available months for import in the customer\'s folder')
+                    help='Lists the available months for import in the customer\'s folder.  Use with the --customer parameter.')
 parser.add_argument('-mm', '--minus_month',
                     type=int,
                     default=0,
-                    help='By default, the current month with be imported.  Use this flag to import previous months, which can be seen with the --available_months flag.  Integer represents number of months in the past (i.e. 1 = last month, 2 = 2 months ago, etc)')
+                    help='By default, the current month with be imported.  Use this flag to import previous months, which can be seen with the --available_months flag.  Integer represents number of months in the past (i.e. 1 = last month, 2 = 2 months ago, etc).  Use with the --customer parameter.')
 
 # Ad-hoc uploading of CUR data
 parser.add_argument('--cur_load',
@@ -58,8 +58,16 @@ try:
         args.role_arn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
         args.bucket = 'rmit-billing-reports'
         args.cur_load = True
-        folderSearch = 'CUR/Hourly'
+        folderFilter = 'CUR/Hourly'
         customerImport = True
+    elif args.customer.lower() == 'ansamual':
+        args.bucket = 'ansamual-costreports'
+        args.cur_load = True
+        folderFilter = 'QuickSight_RedShift_CostReports'
+        customerImport = True
+    else:
+        print('Customer \'' + args.customer.lower() + '\' unknown.  Exiting...')
+        sys.exit()
 except AttributeError:
     customerImport = False
 
@@ -283,7 +291,7 @@ if customerImport:
     # Let's make a new list that only contains CUR files (csv.gz)
     for listObjectsOutput in outputList:
         for s3Object in listObjectsOutput['Contents']:
-            if 'csv.gz' in s3Object['Key'] and folderSearch in s3Object['Key']:
+            if 'csv.gz' in s3Object['Key'] and folderFilter in s3Object['Key']:
                 curFiles[s3Object['Key']] = s3Object['LastModified'].isoformat()
                 # Create a list of all the different folders (i.e. months) where we might want to find the 'latest'
                 try:
