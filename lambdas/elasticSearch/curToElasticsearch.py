@@ -1,5 +1,4 @@
 import csv
-
 import boto3
 import os
 import re
@@ -17,25 +16,26 @@ from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
 from time import sleep
 
 # Argument Creation
-parser = argparse.ArgumentParser(description="Testing, 123.")
+parser = argparse.ArgumentParser(description="This scrupts uploads CUR data to and manipulate Elasticsearch indices")
 parser.add_argument('--elasticsearch_endpoint',
                     default='vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com',
                     help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
 # Working with Indexes
-parser.add_argument('--index_list', action='store_true',
-                    help='Lists the indices described by the --elasticsearch_endpoint parameter.')
-parser.add_argument('--index_delete',
+parser.add_argument('-l', '--index_list', action='store_true',
+                    help='Lists the indices in the cluster described by the --elasticsearch_endpoint parameter.')
+parser.add_argument('-d', '--index_delete',
                     help='Deletes an Elasticsearch index.  Enter the index name to delete')
 
-# Auto uploading of CUR data
-parser.add_argument('--customer',
+# Auto uploading of CUR data for specific customers
+parser.add_argument('-c', '--customer',
                     help='Customer - i.e. RMIT, Sportsbet')
-parser.add_argument('--available_months',
-                    action='store_true')
-parser.add_argument('--minus_month',
+parser.add_argument('-am', '--available_months',
+                    action='store_true',
+                    help='Lists the available months for import in the customer\'s folder')
+parser.add_argument('-mm', '--minus_month',
                     type=int,
                     default=0,
-                    help='')
+                    help='By default, the current month with be imported.  Use this flag to import previous months, which can be seen with the --available_months flag.  Integer represents number of months in the past (i.e. 1 = last month, 2 = 2 months ago, etc)')
 
 # Ad-hoc uploading of CUR data
 parser.add_argument('--cur_load',
