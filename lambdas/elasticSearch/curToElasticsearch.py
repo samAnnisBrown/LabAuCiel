@@ -68,6 +68,12 @@ try:
         args.cur_load = True
         folderFilter = 'QuickSight_RedShift_CostReports'
         customerImport = True
+    elif args.customer.lower() == 'sportsbet':
+        args.role_arn = 'arn:aws:iam::794026524096:role/awsEnterpriseSupportCURAccess'
+        args.bucket = 'sportsbet-billing-data '
+        args.cur_load = True
+        folderFilter = 'hourly'
+        customerImport = True
     else:
         print('Customer \'' + args.customer.lower() + '\' unknown.  Exiting...')
         sys.exit()
@@ -190,6 +196,7 @@ def lambda_handler(event, context):
     # If there are any lines left once loop is completed, upload them.
     if len(linesToUpload) > 0:
         uploadToElasticsearch(linesToUpload, indexName)
+        print("")
 
 
 def uploadToElasticsearch(actions, indexName):
@@ -201,11 +208,11 @@ def uploadToElasticsearch(actions, indexName):
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
 
         helpers.bulk(es, actions)
-        print("Uploaded " + str(len(actions)) + " lines  - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
+        print(str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
     else:
         totalLinesUploadedCount += len(actions)
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
-        print("Upload set to 'False'.  Would've uploaded " + str(len(actions)) + " lines -  " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
+        print("DRYRUN - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
 
 
 def listElasticsearchIndices():
@@ -347,3 +354,5 @@ if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event 
                     }
                 ]
             }, "")
+
+print("Finished")
