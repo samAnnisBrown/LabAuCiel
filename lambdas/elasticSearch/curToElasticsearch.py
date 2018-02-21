@@ -169,8 +169,7 @@ def lambda_handler(event, context):
 
             # Verify that the output row length equals the header row length (otherwise we have a column mismatch)
             if len(payloadValuesOut) != len(payloadKeys):
-                print("Line " + str(count) + " is " + str(len(payloadValuesOut)) + ". Should be " + str(
-                    len(payloadKeys)) + "." + " -- " + str(payloadValuesOut))
+                print("Line " + str(count) + " is " + str(len(payloadValuesOut)) + ". Should be " + str(len(payloadKeys)) + "." + " -- " + str(payloadValuesOut))
             else:
                 # Created the individual line payload
                 payload = dict(zip(payloadKeys, payloadValuesOut))
@@ -179,7 +178,7 @@ def lambda_handler(event, context):
                 linesToUpload.append({"_index": indexName, "_type": "CostReport", "_source": payload})
 
                 # If linesToUpload is > 1000, complete a bulk upload
-                if len(linesToUpload) >= 5000:
+                if len(linesToUpload) >= 250:
                     uploadToElasticsearch(linesToUpload, indexName)
                     linesToUpload = []
 
