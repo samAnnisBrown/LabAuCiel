@@ -71,7 +71,7 @@ try:
         customerImport = True
     elif args.customer.lower() == 'sportsbet':
         args.role_arn = 'arn:aws:iam::794026524096:role/awsEnterpriseSupportCURAccess'
-        args.bucket = 'sportsbet-billing-data '
+        args.bucket = 'sportsbet-billing-data'
         args.cur_load = True
         folderFilter = 'hourly'
         customerImport = True
