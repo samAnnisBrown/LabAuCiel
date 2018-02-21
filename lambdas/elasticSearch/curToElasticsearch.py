@@ -308,7 +308,7 @@ if customerImport:
             print(report)
         sys.exit()
 
-    # Remove all keys that don't below to the appropriate month
+    # Remove all keys that don't belong to the appropriate month
     keysToDelete = [k for k, v in curFiles.items() if sorted(reportsList, reverse=True)[args.minus_month] not in k]
     for key in keysToDelete:
         del curFiles[key]
@@ -316,6 +316,7 @@ if customerImport:
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
     print('File ' + sortedCur[0][0] + ' chosen with date ' + sortedCur[0][1])
     args.key = sortedCur[0][0]
+    sys.exit()
 
 if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
     if args.bucket is None or args.key is None:
