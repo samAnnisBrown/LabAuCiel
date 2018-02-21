@@ -173,7 +173,7 @@ def lambda_handler(event, context):
             else:
                 # Created the individual line payload
                 payload = dict(zip(payloadKeys, payloadValuesOut))
-
+                print(payloadValuesOut[0])
                 # Create the required JSON for Elasticsearch upload
                 linesToUpload.append({"_index": indexName, "_type": "CostReport", "_source": payload})
 
@@ -305,12 +305,10 @@ if customerImport:
             print(report)
         sys.exit()
 
-    print('Total Number of csv.gz files before: ' + str(len(curFiles)))
     # Remove all keys that don't below to the appropriate month
     keysToDelete = [k for k, v in curFiles.items() if sorted(reportsList, reverse=True)[args.minus_month] not in k]
     for key in keysToDelete:
         del curFiles[key]
-    print('Total Number of csv.gz files: ' + str(len(curFiles)))
 
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
     print('File ' + sortedCur[0][0] + ' chosen with date ' + sortedCur[0][1])
