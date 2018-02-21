@@ -107,9 +107,9 @@ def lambda_handler(event, context):
         indexName = ("cur-adoc-" + str(keyName).lower())
 
     # Remove existing index with same name (to avoid duplicate entries)
-    #if args.dryrun is False:
-    #    print('Removing index ' + indexName + " to ensure there are no duplicates...")
-    #    deleteElasticsearchIndex(indexName)
+    if args.dryrun is False:
+        print('Removing index ' + indexName + " to ensure there are no duplicates...")
+        deleteElasticsearchIndex(indexName)
 
     # Prepare variables
     linesToUpload = []
@@ -175,7 +175,8 @@ def lambda_handler(event, context):
                 payload = dict(zip(payloadKeys, payloadValuesOut))
                 
                 # Create the required JSON for Elasticsearch upload
-                linesToUpload.append({"_index": indexName, "_type": "CostReport", "_id": payloadValuesOut[0], "_source": payload})
+                #linesToUpload.append({"_index": indexName, "_type": "CostReport", "_id": payloadValuesOut[0], "_source": payload})
+                linesToUpload.append({"_index": indexName, "_type": "CostReport", "_source": payload})
 
                 # If linesToUpload is > 1000, complete a bulk upload
                 if len(linesToUpload) >= 250:
