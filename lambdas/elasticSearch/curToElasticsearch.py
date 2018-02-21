@@ -315,8 +315,14 @@ if customerImport:
 
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
     print('File ' + sortedCur[0][0] + ' chosen with date ' + sortedCur[0][1])
-    folderHash = re.search("(.+-.+-.+-.+/).+", sortedCur[0][0]).group(1)
-    print(s3.list_objects_v2(Bucket=args.bucket, Key=folderHash))
+    folderHash = re.search(".*/(.+-.+-.+-.+)/.+", sortedCur[0][0]).group(1)
+    newlist = []
+
+    for listObjectsOutput in outputList:
+        for s3Object in listObjectsOutput['Contents']:
+            if 'csv.gz' in s3Object['Key'] and folderHash in s3Object['Key']:
+                newlist.append(s3Object['Key'])
+    print(newlist)
     args.key = sortedCur[0][0]
     sys.exit()
 
