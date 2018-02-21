@@ -31,13 +31,13 @@ parser.add_argument('-d', '--index_delete',
 # Auto uploading of CUR data for specific customers
 parser.add_argument('-c', '--customer',
                     help='Customer - i.e. RMIT, Sportsbet')
-parser.add_argument('-am', '--available_months',
+parser.add_argument('-lm', '--list_months',
                     action='store_true',
                     help='Lists the available months for import in the customer\'s folder.  Use with the --customer parameter.')
-parser.add_argument('-mm', '--minus_month',
+parser.add_argument('-m', '--minus_month',
                     type=int,
                     default=0,
-                    help='By default, the current month with be imported.  Use this flag to import previous months, which can be seen with the --available_months flag.  Integer represents number of months in the past (i.e. 1 = last month, 2 = 2 months ago, etc).  Use with the --customer parameter.')
+                    help='By default, the current month with be imported.  Use this flag to import previous months, which can be seen with the --list-months flag.  Integer represents number of months in the past (i.e. 1 = last month, 2 = 2 months ago, etc).  Use with the --customer parameter.')
 
 # Ad-hoc uploading of CUR data
 parser.add_argument('--cur_load',
@@ -321,7 +321,7 @@ if customerImport:
                 except AttributeError:
                     searchKey = None
 
-    if args.available_months:
+    if args.list_months:
         for report in reportsList:
             print(report)
         sys.exit()
