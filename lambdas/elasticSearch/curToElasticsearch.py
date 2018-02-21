@@ -1,17 +1,18 @@
-import csv
-import boto3
-import os
-import re
-import sys
-import requests
-import argparse
-import operator
-import hashlib
+import csv          # To deal with the CUR CSVs
+import boto3        # To interact with AWS
+import os           # To get OS environmental variabls for auth
+import re           # For all the regex
+import sys          # To exit the script when things go wrong or are finished
+import requests     # To interact with Elasticsearch (like curl)
+import argparse     # For all the aguments
+import operator     # For some sorting stuff
+import hashlib      # MD5 Hashes for each line
+import gc           # Garbage Collection - in an effort to clear memory between files
 
-from gzip import GzipFile
-from io import BytesIO
-from elasticsearch import helpers
-from elasticsearch import Elasticsearch, RequestsHttpConnection
+from gzip import GzipFile       # So we can gunzip stuff
+from io import BytesIO          # Stream bytes from S3
+from elasticsearch import helpers   # To interact with Elasticsearch
+from elasticsearch import Elasticsearch, RequestsHttpConnection     # To interact with Elasticseardh
 from aws_requests_auth.aws_auth import AWSRequestsAuth
 from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
 from time import sleep
@@ -196,7 +197,15 @@ def lambda_handler(event, context):
     # If there are any lines left once loop is completed, upload them.
     if len(linesToUpload) > 0:
         uploadToElasticsearch(linesToUpload, indexName)
-        print("")
+
+    # Final Cleanup
+    print("")
+    totalLinesUploadedCount = 0
+    totalLinesCount = 0
+    s3file = None
+    bytestream = None
+    outfile = None
+    gc.collect()
 
 
 def uploadToElasticsearch(actions, indexName):
