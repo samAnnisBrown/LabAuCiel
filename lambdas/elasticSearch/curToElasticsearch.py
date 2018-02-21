@@ -176,9 +176,8 @@ def lambda_handler(event, context):
                 payload = dict(zip(payloadKeys, payloadValuesOut))
                 
                 # Create the required JSON for Elasticsearch upload
-                m = hashlib.md5()
-                m.updated(payload)
-                print(m.hexdigest())
+                print(payload)
+                print(hashlib.md5(str(payload).encode('utf-8')).hexdigest())
                 #linesToUpload.append({"_index": indexName, "_type": "CostReport", "_id": payloadValuesOut[0], "_source": payload})
                 linesToUpload.append({"_index": indexName, "_type": "CostReport", "_source": payload})
 
