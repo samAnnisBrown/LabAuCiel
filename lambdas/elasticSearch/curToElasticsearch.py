@@ -173,9 +173,9 @@ def lambda_handler(event, context):
             else:
                 # Created the individual line payload
                 payload = dict(zip(payloadKeys, payloadValuesOut))
-                print(payloadValuesOut[0])
+                
                 # Create the required JSON for Elasticsearch upload
-                linesToUpload.append({"_index": indexName, "_type": "CostReport", "_source": payload})
+                linesToUpload.append({"_index": indexName, "_type": "CostReport", "_id": payloadValuesOut[0], "_source": payload})
 
                 # If linesToUpload is > 1000, complete a bulk upload
                 if len(linesToUpload) >= 250:
