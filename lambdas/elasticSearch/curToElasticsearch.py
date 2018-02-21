@@ -108,9 +108,9 @@ def lambda_handler(event, context):
         indexName = ("cur-adoc-" + str(keyName).lower())
 
     # Remove existing index with same name (to avoid duplicate entries)
-    if args.dryrun is False:
-        print('Removing index ' + indexName + " to ensure there are no duplicates...")
-        deleteElasticsearchIndex(indexName)
+    #if args.dryrun is False:
+    #    print('Removing index ' + indexName + " to ensure there are no duplicates...")
+    #    deleteElasticsearchIndex(indexName)
 
     # Prepare variables
     linesToUpload = []
