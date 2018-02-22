@@ -267,7 +267,7 @@ def getLatestCurByMonth():
     for file in latestCurFiles:
         print("- " + file)
     print("")
-    return [sortedCurFiles[0][0]]
+    return [latestCurFiles]
 
 
 # launchImport(getLatestCurByMonth())
