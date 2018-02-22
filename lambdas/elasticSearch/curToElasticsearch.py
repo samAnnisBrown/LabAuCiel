@@ -200,9 +200,8 @@ def lambda_handler(event, context):
 
     # Final Cleanup
     print("")
-    global totalLinesUploadedCount, totalLinesCount
+    global totalLinesUploadedCount
     totalLinesUploadedCount = 0
-    totalLinesCount = 0
     s3file, bytestream, outfile = None
     gc.collect()
 
