@@ -21,30 +21,80 @@ parser.add_argument('-m', '--minus_month',
                     default=0,
                     help='By default, the current month with be imported.  Use this flag to import previous months, which can be seen with the --list-months flag.  Integer represents number of months in the past (i.e. 1 = last month, 2 = 2 months ago, etc).  Use with the --customer parameter.')
 # Ad-hoc uploading of CUR data
-parser.add_argument('-r', '--report_name',
-                    default='QuickSight_Red')
 parser.add_argument('-db', '--athena_database_name',
-                    default='cost_usage_reports')
+                    default='aws_cost_analysis')
+parser.add_argument('-t', '--athena_table_name',
+                    default='cur')
+
+# Filter
+parser.add_argument('-f', '--folder_filter',
+                    default='QuickSight_Red')
 parser.add_argument('--role_arn',
                     help='If using STS auth, the ARN of the role to be assumed.')
 parser.add_argument('--from_bucket',
                     help='The S3 Bucket that contains the import CUR .csv.gz file.')
 parser.add_argument('--to_bucket',
-                    help='The S3 Bucket that contains the import CUR .csv.gz file.')
-parser.add_argument('--key',
+                    default='ansamual-athena',
                     help='The S3 Bucket that contains the import CUR .csv.gz file.')
 args = parser.parse_args()
 
+try:
+    if args.customer.lower() == 'rmit':
+        args.role_arn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
+        args.from_bucket = 'rmit-billing-reports'
+        args.folder_filter = 'CUR/Hourly'
+    elif args.customer.lower() == 'ansamual':
+        args.from_bucket = 'ansamual-costreports'
+        args.folder_filter = 'QuickSight_RedShift_CostReports'
+    elif args.customer.lower() == 'sportsbet':
+        args.role_arn = 'arn:aws:iam::794026524096:role/awsEnterpriseSupportCURAccess'
+        args.from_bucket = 'sportsbet-billing-data'
+        args.folder_filter = 'hourly'
+    else:
+        print('Customer \'' + args.customer.lower() + '\' unknown.  Exiting...')
+        sys.exit()
+except AttributeError:
+    customerImport = False
 
+
+# <--------------------- MAIN IMPORT/LAMBDA FUNCTION --------------------->
 def lambdaHandler(event):
+    # Generate Variables
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = event["Records"][0]["s3"]["object"]["key"]
     fileName = re.search(".+/(.+)\.", key).group(1)
     yearMonth = re.search(".+/(\d+)-\d+/.+", key).group(1)
 
+    # Complete Transform
     curCsv = getExtractedCurFile(bucket, key)
     transformToS3(curCsv, fileName, yearMonth)
     updateAthena(curCsv)
+
+# <--------------------- S3 HANDLING --------------------->
+def getExtractedCurFile(bucket, key):
+    # Download S3 file
+    s3 = returnClientAuth('s3', True)
+    print('Downloading \"' + bucket + '/' + key + '\" from S3')
+    s3file = s3.get_object(Bucket=bucket, Key=key)
+
+    # Unzip into memory
+    print('Unzipping into memory...')
+    bytestream = BytesIO(s3file['Body'].read())
+    outfile = GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
+
+    return outfile
+
+
+def transformToS3(curFile, fileName, yearMonth):
+    s3 = returnClientAuth('s3', False)
+    truncateLength = len(curFile.split('\n')[0]) + 1
+
+    # Put the object in S3
+    uploadKey = 'cur/report=' + args.from_bucket + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName
+    print('Uploading unzipped and transformed CSV to ' + uploadKey)
+    s3.put_object(Bucket=args.to_bucket, Key=uploadKey.lower(), Body=curFile[truncateLength:])
+    #s3.put_object(Bucket=args.to_bucket, Key=uploadKey, Body=outFile)
+    return uploadKey
 
 
 # <--------------------- ATHENA LOGIC --------------------->
@@ -72,7 +122,7 @@ def updateAthena(curFile):
      TBLPROPERTIES (
      'has_encrypted_data'='false',
      'serialization.null.format'='',
-     'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (args.athena_database_name, args.from_bucket.replace("-", "_"), tableStructure, 's3://' + args.to_bucket + '/' + args.from_bucket)
+     'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (args.athena_database_name, args.athena_table_name, tableStructure, 's3://' + args.to_bucket + '/' + args.from_bucket)
 
     athena.start_query_execution(
         QueryString=create_table,
@@ -83,55 +133,6 @@ def updateAthena(curFile):
             'OutputLocation': 's3://' + args.to_bucket + '/query_output',
         }
     )
-
-
-# <--------------------- AUTH --------------------->
-def returnClientAuth(service, assumeRole):
-    if args.role_arn is not None and assumeRole:
-        client = boto3.client(service)
-        assumed_role = client.assume_role(
-            RoleArn=args.role_arn,
-            RoleSessionName='cur_temp_sts_session'
-        )
-
-        creds = assumed_role['Credentials']
-
-        clientAuth = boto3.client(service,
-                          region_name='ap-southeast-2',
-                          aws_access_key_id=creds['AccessKeyId'],
-                          aws_secret_access_key=creds['SecretAccessKey'],
-                          aws_session_token=creds['SessionToken'], )
-    else:
-        clientAuth = boto3.client(service, region_name='ap-southeast-2')
-
-    return clientAuth
-
-
-# <--------------------- S3 HANDLING --------------------->
-def getExtractedCurFile(bucket, key):
-    # Download S3 file
-    s3 = returnClientAuth('s3', True)
-    print('Downloading \"' + bucket + '/' + key + '\" from S3')
-    s3file = s3.get_object(Bucket=bucket, Key=key)
-
-    # Unzip into memory
-    print('Unzipping into memory...')
-    bytestream = BytesIO(s3file['Body'].read())
-    outfile = GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
-
-    return outfile
-
-
-def transformToS3(curFile, fileName, yearMonth):
-    s3 = returnClientAuth('s3', False)
-    truncateLength = len(curFile.split('\n')[0]) + 1
-
-    # Put the object in S3
-    uploadKey = args.from_bucket + '/' + yearMonth[0:4] + '/' + yearMonth[4:6] + '/' + fileName
-    print('Uploading unzipped and transformed CSV to ' + uploadKey)
-    s3.put_object(Bucket=args.to_bucket, Key=uploadKey, Body=curFile[truncateLength:])
-    #s3.put_object(Bucket=args.to_bucket, Key=uploadKey, Body=outFile)
-    return uploadKey
 
 
 # <--------------------- OTHER STUFF --------------------->
@@ -168,6 +169,29 @@ def returnColumnTypes(columnList):
 
     return tableStructure[:-2]
 
+
+# <--------------------- AUTH --------------------->
+def returnClientAuth(service, assumeRole):
+    if args.role_arn is not None and assumeRole:
+        client = boto3.client('sts')
+        assumed_role = client.assume_role(
+            RoleArn=args.role_arn,
+            RoleSessionName='cur_temp_sts_session'
+        )
+
+        creds = assumed_role['Credentials']
+
+        clientAuth = boto3.client(service,
+                                  region_name='ap-southeast-2',
+                                  aws_access_key_id=creds['AccessKeyId'],
+                                  aws_secret_access_key=creds['SecretAccessKey'],
+                                  aws_session_token=creds['SessionToken'], )
+    else:
+        clientAuth = boto3.client(service, region_name='ap-southeast-2')
+
+    return clientAuth
+
+
 # <--------------------- MANUAL LAUNCH --------------------->
 def manualLaunch():  # If not in a Lambda, launch main function and pass S3 event JSON
     curFiles = getLatestCurByMonth()
@@ -201,13 +225,13 @@ def getLatestCurByMonth():
     # While S3 is still returning truncated, keep appending to the s3ObjectList
     while s3ApiOutput['IsTruncated']:
         s3ObjectList.append(s3ApiOutput)
-        s3ApiOutput = s3.list_objects_v2(Bucket=args.bucket, ContinuationToken=s3ApiOutput['NextContinuationToken'])
+        s3ApiOutput = s3.list_objects_v2(Bucket=args.from_bucket, ContinuationToken=s3ApiOutput['NextContinuationToken'])
     s3ObjectList.append(s3ApiOutput)    # Append whatever's remaining to the s3ObjectList
 
     # Let's populate our tuple so that it only contains CUR files (csv.gz), and our listOfMonths
     for j in s3ObjectList:  # Each ApiOutput is a separate item in the list
         for k in j['Contents']: # With each item having contents from returned call
-            if 'csv.gz' in k['Key'] and args.report_name in k['Key']:
+            if 'csv.gz' in k['Key'] and args.folder_filter in k['Key']:
                 allCurFiles[k['Key']] = k['LastModified'].isoformat()
                 # Create a list of all the different folders (i.e. months) where we might want to find the 'latest'
                 try:
