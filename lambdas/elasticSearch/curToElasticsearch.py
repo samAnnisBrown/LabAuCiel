@@ -117,9 +117,9 @@ def lambda_handler(event, context):
         indexName = ("cur-adoc-" + str(keyName).lower())
 
     # Remove existing index with same name (to avoid duplicate entries)
-    #if args.dryrun is False:
-    #    print('Removing index ' + indexName + " to ensure there are no duplicates...")
-    #    deleteElasticsearchIndex(indexName)
+    if args.dryrun is False:
+        print('Removing index ' + indexName + " to ensure there are no duplicates...")
+        deleteElasticsearchIndex(indexName)
 
     # Prepare variables
     linesToUpload = []
@@ -202,7 +202,9 @@ def lambda_handler(event, context):
     print("")
     global totalLinesUploadedCount
     totalLinesUploadedCount = 0
-    s3file, bytestream, outfile = None
+    s3file = None
+    bytestream = None
+    outfile = None
     gc.collect()
 
 
