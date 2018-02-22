@@ -67,11 +67,12 @@ def updateAthena(curFile):
         """CREATE EXTERNAL TABLE IF NOT EXISTS %s.%s (
         %s
      )
-     ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-     WITH SERDEPROPERTIES (
-      'separatorChar' = ','
-     ) LOCATION '%s'
-     TBLPROPERTIES ('has_encrypted_data'='false');""" % (args.athena_database_name, args.from_bucket.replace("-", "_"), tableStructure[:-2], 's3://' + args.to_bucket + '/' + args.from_bucket)
+     ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
+     LOCATION '%s'
+     TBLPROPERTIES (
+     'has_encrypted_data'='false',
+     'serialization.null.format'='',
+     'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (args.athena_database_name, args.from_bucket.replace("-", "_"), tableStructure, 's3://' + args.to_bucket + '/' + args.from_bucket)
 
     athena.start_query_execution(
         QueryString=create_table,
@@ -82,10 +83,6 @@ def updateAthena(curFile):
             'OutputLocation': 's3://' + args.to_bucket + '/query_output',
         }
     )
-
-
-def uploadCurForAthena():
-    print("")
 
 
 # <--------------------- AUTH --------------------->
@@ -127,12 +124,13 @@ def getExtractedCurFile(bucket, key):
 
 def transformToS3(curFile, fileName, yearMonth):
     s3 = returnClientAuth('s3', False)
-    #  Remove first line by counting it's length, then adding 1 to remove the character return
     truncateLength = len(curFile.split('\n')[0]) + 1
+
     # Put the object in S3
     uploadKey = args.from_bucket + '/' + yearMonth[0:4] + '/' + yearMonth[4:6] + '/' + fileName
     print('Uploading unzipped and transformed CSV to ' + uploadKey)
     s3.put_object(Bucket=args.to_bucket, Key=uploadKey, Body=curFile[truncateLength:])
+    #s3.put_object(Bucket=args.to_bucket, Key=uploadKey, Body=outFile)
     return uploadKey
 
 
@@ -142,7 +140,7 @@ def returnColumnTypes(columnList):
     for value in columnList:
         # DATE
         if 'Date' in value:
-            tableStructure += '`' + value.replace("/", "_") + '`' + ' Date,\n'
+            tableStructure += '`' + value.replace("/", "_") + '`' + ' timestamp,\n'
         # INT
         elif 'engine' in value \
                 or 'Iopsvol' in value \
@@ -168,7 +166,7 @@ def returnColumnTypes(columnList):
         else:
             tableStructure += '`' + value.replace("/", "_") + '`' + ' STRING,\n'
 
-    return tableStructure
+    return tableStructure[:-2]
 
 # <--------------------- MANUAL LAUNCH --------------------->
 def manualLaunch():  # If not in a Lambda, launch main function and pass S3 event JSON
