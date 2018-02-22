@@ -122,7 +122,7 @@ def updateAthena(curFile):
      TBLPROPERTIES (
      'has_encrypted_data'='false',
      'serialization.null.format'='',
-     'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (args.athena_database_name, args.from_bucket, tableStructure, 's3://' + args.to_bucket + '/' + args.from_bucket)
+     'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (args.athena_database_name, args.from_bucket.replace("-", "_"), tableStructure, 's3://' + args.to_bucket + '/' + args.from_bucket)
 
     athena.start_query_execution(
         QueryString=create_table,
