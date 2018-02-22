@@ -90,7 +90,7 @@ def transformToS3(curFile, fileName, yearMonth):
     truncateLength = len(curFile.split('\n')[0]) + 1
 
     # Put the object in S3
-    uploadKey = args.from_bucket + '/report=' + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName
+    uploadKey = args.from_bucket + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName
     print('Uploading unzipped and transformed CSV to ' + uploadKey)
     s3.put_object(Bucket=args.to_bucket, Key=uploadKey.lower(), Body=curFile[truncateLength:])
     #s3.put_object(Bucket=args.to_bucket, Key=uploadKey, Body=outFile)
@@ -122,7 +122,7 @@ def updateAthena(curFile):
      TBLPROPERTIES (
      'has_encrypted_data'='false',
      'serialization.null.format'='',
-     'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (args.athena_database_name, args.from_bucket, tableStructure, 's3://' + args.to_bucket + '/' + args.athena_table_name)
+     'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (args.athena_database_name, args.from_bucket, tableStructure, 's3://' + args.to_bucket + '/' + args.from_bucket)
 
     athena.start_query_execution(
         QueryString=create_table,
