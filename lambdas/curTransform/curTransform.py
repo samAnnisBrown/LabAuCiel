@@ -137,7 +137,7 @@ def updateAthena(curFile):
     s3Location = 's3://' + args.to_bucket + '/' + args.from_bucket
 
     create_table = \
-        """CREATE EXTERNAL TABLE IF NOT EXISTS "%s.%s" (
+        """CREATE EXTERNAL TABLE IF NOT EXISTS %s."%s" (
         %s
      )
      PARTITIONED BY (year string, month string)
