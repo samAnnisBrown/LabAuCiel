@@ -150,7 +150,7 @@ def updateAthena(curFile):
 
     update_partitioning = """MSCK REPAIR TABLE %s.%s;""" % (dbName, tableName)
 
-    print("Updating Athena...")
+    print("Updating Athena " + dbName + '.' + tableName)
     queries = [create_table, update_partitioning]
     for query in queries:
         athena.start_query_execution(
