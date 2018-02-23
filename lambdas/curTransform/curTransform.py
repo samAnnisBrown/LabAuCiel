@@ -111,8 +111,8 @@ def transformToS3(curFile, fileName, yearMonth):
     curFile = '\n'.join(curFileTransformed)
 
     # Put the object in S3
-    uploadKey = args.athena_table_name + '/report=' + args.from_bucket + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName
-    print('Uploading unzipped and transformed CSV to ' + uploadKey)
+    uploadKey = args.athena_table_name + '/report=' + args.from_bucket + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/file=' + fileName
+    print('Uploading unzipped and transformed CSV to ' + uploadKey.lower())
     s3.put_object(Bucket=args.to_bucket, Key=uploadKey.lower(), Body=curFile)
     return uploadKey
 
@@ -140,7 +140,7 @@ def updateAthena(curFile):
         """CREATE EXTERNAL TABLE IF NOT EXISTS %s.%s (
         %s
      )
-     PARTITIONED BY (report string, year string, month string)
+     PARTITIONED BY (report string, year string, month string, file string)
      ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' ESCAPED BY '|' LINES TERMINATED BY '\n'
      LOCATION '%s'
      TBLPROPERTIES (
