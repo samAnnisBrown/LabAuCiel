@@ -28,7 +28,7 @@ parser.add_argument('-db', '--athena_database_name',
 parser.add_argument('-t', '--athena_table_name',
                     default='cur_table')
 
-# Filter
+# Main Params
 parser.add_argument('-f', '--folder_filter',
                     default='QuickSight_Red')
 parser.add_argument('--role_arn',
@@ -111,7 +111,7 @@ def transformToS3(curFile, fileName, yearMonth):
     curFile = '\n'.join(curFileTransformed)
 
     # Put the object in S3
-    uploadKey = args.athena_table_name + '/report=' + args.from_bucket + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName
+    uploadKey = args.from_bucket + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName
     print('Uploading unzipped and transformed CSV to ' + uploadKey.lower())
     s3.put_object(Bucket=args.to_bucket, Key=uploadKey.lower(), Body=curFile)
     return uploadKey
@@ -132,15 +132,15 @@ def updateAthena(curFile):
     columnList = list(csv.reader([curFile.splitlines()[0]]))[0]  # need to encapsulate/decapsulate list for csv.reader to work
 
     dbName = args.athena_database_name
-    tableName = args.athena_table_name.replace("-", "_")
+    tableName = args.from_bucket.replace("-", "_")
     tableFields = returnColumnTypes(columnList)
-    s3Location = 's3://' + args.to_bucket + '/' + args.athena_table_name
+    s3Location = 's3://' + args.to_bucket + '/' + args.from_bucket
 
     create_table = \
         """CREATE EXTERNAL TABLE IF NOT EXISTS %s.%s (
         %s
      )
-     PARTITIONED BY (report string, year string, month string)
+     PARTITIONED BY (year string, month string)
      ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' ESCAPED BY '|' LINES TERMINATED BY '\n'
      LOCATION '%s'
      TBLPROPERTIES (
