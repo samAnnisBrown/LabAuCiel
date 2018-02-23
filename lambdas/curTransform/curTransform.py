@@ -25,8 +25,7 @@ parser.add_argument('-m', '--minus_month',
 # Ad-hoc uploading of CUR data
 parser.add_argument('-db', '--athena_database_name',
                     default='aws_cost_analysis')
-parser.add_argument('-t', '--athena_table_name',
-                    default='cur_table')
+parser.add_argument('-t', '--athena_table_name')
 
 # Main Params
 parser.add_argument('-f', '--folder_filter',
@@ -45,13 +44,18 @@ try:
         args.role_arn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
         args.from_bucket = 'rmit-billing-reports'
         args.folder_filter = 'CUR/Hourly'
+        args.athena_table_name = 'rmit'
+
     elif args.customer.lower() == 'ansamual':
         args.from_bucket = 'ansamual-costreports'
         args.folder_filter = 'QuickSight_RedShift_CostReports'
+        args.athena_table_name = 'ansamual'
+
     elif args.customer.lower() == 'sportsbet':
         args.role_arn = 'arn:aws:iam::794026524096:role/awsEnterpriseSupportCURAccess'
         args.from_bucket = 'sportsbet-billing-data'
         args.folder_filter = 'hourly'
+        args.athena_table_name = 'sportsbet'
     else:
         print('Customer \'' + args.customer.lower() + '\' unknown.  Exiting...')
         sys.exit()
@@ -132,7 +136,7 @@ def updateAthena(curFile):
     columnList = list(csv.reader([curFile.splitlines()[0]]))[0]  # need to encapsulate/decapsulate list for csv.reader to work
 
     dbName = args.athena_database_name
-    tableName = args.from_bucket.replace("-", "_")
+    tableName = args.athena_table_name
     tableFields = returnColumnTypes(columnList)
     s3Location = 's3://' + args.to_bucket + '/' + args.from_bucket
 
