@@ -151,7 +151,7 @@ def updateAthena(curFile):
      'has_encrypted_data'='false',
      'serialization.null.format'='',
      'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (dbName, tableName, tableFields, s3Location)
-
+    print(create_table)
     update_partitioning = """MSCK REPAIR TABLE %s.%s;""" % (dbName, tableName)
 
     print("Updating Athena " + dbName + '.' + tableName)
