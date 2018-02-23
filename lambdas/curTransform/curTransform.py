@@ -7,24 +7,26 @@ import csv          # To deal with the CUR CSVs
 
 from gzip import GzipFile       # So we can gunzip stuff
 from io import BytesIO          # Stream bytes from S3
+from time import sleep
 
 # <--------------------- ARGUEMENT HANDLING --------------------->
 parser = argparse.ArgumentParser(description="This scrupts uploads CUR data to and manipulate Elasticsearch indices")
 # Auto uploading of CUR data for specific customers
 parser.add_argument('-c', '--customer',
                     help='Customer - i.e. RMIT, Sportsbet')
-parser.add_argument('-lm', '--list_months',
+parser.add_argument('-l', '--list_months',
                     action='store_true',
                     help='Lists the available months for import in the customer\'s folder.  Use with the --customer parameter.')
 parser.add_argument('-m', '--minus_month',
                     type=int,
                     default=0,
                     help='By default, the current month with be imported.  Use this flag to import previous months, which can be seen with the --list-months flag.  Integer represents number of months in the past (i.e. 1 = last month, 2 = 2 months ago, etc).  Use with the --customer parameter.')
+
 # Ad-hoc uploading of CUR data
 parser.add_argument('-db', '--athena_database_name',
                     default='aws_cost_analysis')
 parser.add_argument('-t', '--athena_table_name',
-                    default='cur')
+                    default='cur_table')
 
 # Filter
 parser.add_argument('-f', '--folder_filter',
@@ -58,7 +60,7 @@ except AttributeError:
 
 
 # <--------------------- MAIN IMPORT/LAMBDA FUNCTION --------------------->
-def lambdaHandler(event):
+def curToAthena(event):
     # Generate Variables
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = event["Records"][0]["s3"]["object"]["key"]
@@ -69,6 +71,7 @@ def lambdaHandler(event):
     curCsv = getExtractedCurFile(bucket, key)
     transformToS3(curCsv, fileName, yearMonth)
     updateAthena(curCsv)
+
 
 # <--------------------- S3 HANDLING --------------------->
 def getExtractedCurFile(bucket, key):
@@ -87,22 +90,35 @@ def getExtractedCurFile(bucket, key):
 
 def transformToS3(curFile, fileName, yearMonth):
     s3 = returnClientAuth('s3', False)
-    truncateLength = len(curFile.split('\n')[0]) + 1
+    print('Transforming CUR file...')
+    curFileTransformed = []
+    # Let's read line by line
+    for line in curFile.splitlines()[1:]:
+        # Isolate lines with quotes in them
+        if '"' in line:
+            # Split on quotes
+            lineAsList = line.split('"')
+            # If index odd, the item is between quotes, so replace all commas with escaped commas
+            for i, part in enumerate(lineAsList):
+                # Replace on odds only
+                if i % 2 != 0:
+                    lineAsList[i] = part.replace(",", "|,")
+            # Rejoin line as string
+            line = ''.join(lineAsList)
+        # Append to transformed file
+        curFileTransformed.append(line)
+    # Update curFile with transformed content
+    curFile = '\n'.join(curFileTransformed)
 
     # Put the object in S3
-    uploadKey = args.from_bucket + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName
+    uploadKey = args.athena_table_name + '/report=' + args.from_bucket + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName
     print('Uploading unzipped and transformed CSV to ' + uploadKey)
-    s3.put_object(Bucket=args.to_bucket, Key=uploadKey.lower(), Body=curFile[truncateLength:])
-    #s3.put_object(Bucket=args.to_bucket, Key=uploadKey, Body=outFile)
+    s3.put_object(Bucket=args.to_bucket, Key=uploadKey.lower(), Body=curFile)
     return uploadKey
 
 
 # <--------------------- ATHENA LOGIC --------------------->
 def updateAthena(curFile):
-    columnList = list(csv.reader([curFile.splitlines()[0]]))[0]  # need to encapsulate/decapsulate list for csv.reader to work
-
-    tableStructure = returnColumnTypes(columnList)
-
     athena = returnClientAuth('athena', False)
 
     createDatabase = 'CREATE DATABASE IF NOT EXISTS %s' % (args.athena_database_name)
@@ -113,43 +129,54 @@ def updateAthena(curFile):
         }
     )
 
+    columnList = list(csv.reader([curFile.splitlines()[0]]))[0]  # need to encapsulate/decapsulate list for csv.reader to work
+
+    dbName = args.athena_database_name
+    tableName = args.athena_table_name.replace("-", "_")
+    tableFields = returnColumnTypes(columnList)
+    s3Location = 's3://' + args.to_bucket + '/' + args.athena_table_name
+
     create_table = \
         """CREATE EXTERNAL TABLE IF NOT EXISTS %s.%s (
         %s
      )
-     ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n'
+     PARTITIONED BY (report string, year string, month string)
+     ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' ESCAPED BY '|' LINES TERMINATED BY '\n'
      LOCATION '%s'
      TBLPROPERTIES (
      'has_encrypted_data'='false',
      'serialization.null.format'='',
-     'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (args.athena_database_name, args.from_bucket.replace("-", "_"), tableStructure, 's3://' + args.to_bucket + '/' + args.from_bucket)
+     'timestamp.formats'="yyyy-MM-dd'T'HH:mm:ss'Z'");""" % (dbName, tableName, tableFields, s3Location)
 
-    athena.start_query_execution(
-        QueryString=create_table,
-        QueryExecutionContext={
-            'Database': args.athena_database_name
-        },
-        ResultConfiguration={
-            'OutputLocation': 's3://' + args.to_bucket + '/query_output',
-        }
-    )
+    update_partitioning = """MSCK REPAIR TABLE %s.%s;""" % (dbName, tableName)
+
+    print("Updating Athena...")
+    queries = [create_table, update_partitioning]
+    for query in queries:
+        athena.start_query_execution(
+            QueryString=query,
+            QueryExecutionContext={
+                'Database': args.athena_database_name
+            },
+            ResultConfiguration={
+                'OutputLocation': 's3://' + args.to_bucket + '/query_output',
+            }
+        )
+        sleep(1)
 
 
 # <--------------------- OTHER STUFF --------------------->
 def returnColumnTypes(columnList):
     tableStructure = ""
     for value in columnList:
-        # DATE
         if 'Date' in value:
             tableStructure += '`' + value.replace("/", "_") + '`' + ' timestamp,\n'
-        # INT
         elif 'engine' in value \
                 or 'Iopsvol' in value \
                 or 'vcpu' in value \
                 or 'UnitsPerReservation' in value \
                 or 'TotalReservedUnits' in value:
             tableStructure += '`' + value.replace("/", "_") + '`' + ' INT,\n'
-        # FLOAT
         elif 'UsageAmount' in value \
                 or 'lended' in value \
                 or 'SizeFactor' in value \
@@ -163,7 +190,6 @@ def returnColumnTypes(columnList):
                 or 'UpfrontValue' in value \
                 or 'OnDemand' in value:
             tableStructure += '`' + value.replace("/", "_") + '`' + ' FLOAT,\n'
-        # STRING
         else:
             tableStructure += '`' + value.replace("/", "_") + '`' + ' STRING,\n'
 
@@ -192,27 +218,8 @@ def returnClientAuth(service, assumeRole):
     return clientAuth
 
 
-# <--------------------- MANUAL LAUNCH --------------------->
-def manualLaunch():  # If not in a Lambda, launch main function and pass S3 event JSON
-    curFiles = getLatestCurByMonth()
-    for key in curFiles:
-        lambdaHandler({
-            "Records": [
-                {
-                    "s3": {
-                        "bucket": {
-                            "name": args.from_bucket,
-                        },
-                        "object": {
-                            "key": key,
-                        }
-                    }
-                }
-            ]
-        })
-
-
-def getLatestCurByMonth():
+# <--------------------- GETTING OLDER REPORTS --------------------->
+def getLatestCurByMonth(listMonths=args.list_months):
     # Create dit/list
     s3ObjectList = []   # Initialise a list to hold all S3 objects in our defined bucket
     allCurFiles = {}    # Initialise a tuple to hold only the S3 objects that are CUR files in the bucket
@@ -242,7 +249,7 @@ def getLatestCurByMonth():
                     searchKey = None
 
     # Allow user to only list months then exit if -lm flag is enabled
-    if args.list_months:
+    if listMonths:
         for report in listOfMonths:
             print(report)
         sys.exit()
@@ -267,9 +274,29 @@ def getLatestCurByMonth():
     for file in latestCurFiles:
         print("- " + file)
     print("")
+
     return latestCurFiles
 
 
-# launchImport(getLatestCurByMonth())
+# <--------------------- MANUAL LAUNCH --------------------->
+def manualLaunch():  # If not in a Lambda, launch main function and pass S3 event JSON
+    curFiles = getLatestCurByMonth()
+    for key in curFiles:
+        curToAthena({
+            "Records": [
+                {
+                    "s3": {
+                        "bucket": {
+                            "name": args.from_bucket,
+                        },
+                        "object": {
+                            "key": key,
+                        }
+                    }
+                }
+            ]
+        })
+
+
 manualLaunch()
 
