@@ -172,6 +172,7 @@ def updateAthena(curFile):
 # <--------------------- OTHER STUFF --------------------->
 def returnColumnTypes(columnList):
     tableStructure = ""
+    findRepeats = []
     for value in columnList:
         if 'Date' in value:
             tableStructure += '`' + value.replace("/", "_") + '`' + ' timestamp,\n'
@@ -195,8 +196,20 @@ def returnColumnTypes(columnList):
                 or 'OnDemand' in value:
             tableStructure += '`' + value.replace("/", "_") + '`' + ' FLOAT,\n'
         else:
+            # Athena isn't case sensitive, so customer tag names such as Name and name are seen as the same.  Append a 0 to deal with this
+            if value.lower() in findRepeats:
+                value = value + '0'
+            findRepeats.append(value.lower())
+            # Remove the : from custom tag names in the CUR
+            value = value.replace(":", "_")
+            # Make this a string
             tableStructure += '`' + value.replace("/", "_") + '`' + ' STRING,\n'
 
+    #sys.exit()
+    for item in tableStructure.splitlines():
+        print(item)
+
+    sys.exit()
     return tableStructure[:-2]
 
 
