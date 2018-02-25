@@ -7,29 +7,29 @@ import copy
 es = 'https://search-syd-summit-2018-pdktt2gfyw7cbrtcr24rzieoxe.us-east-1.es.amazonaws.com'
 
 
-def lmbd(event):
-    ecpy = copy.deepcopy(event)
+def lmbd(evt):
+    ic = copy.deepcopy(evt)  # Immutable copy of event
     try:
-        sub(event)      # Sub
-        rt(event)       # Root
+        sub(evt)      # Sub
+        rt(evt)       # Root
     except:
         pass
-    return ecpy         # For Notifcation
+    return ic         # For Notifcation
 
 
-def rt(event):
+def rt(evt):
     lst = []
-    for w in event.items():
+    for w in evt.items():
         if type(w[1]) is dict:
             lst.append(w[0])
     for l in lst:
-        event.pop(l)
-    ToEs(event, 'json-root')
+        evt.pop(l)
+    ToEs(evt, 'json-root')
 
 
-def sub(event):
-    for x in event.items():
-        k = event[x[0]]
+def sub(evt):
+    for x in evt.items():
+        k = evt[x[0]]
         vt = type(x[1])
         if vt is dict:
             try:
@@ -47,11 +47,11 @@ def sub(event):
                 pass
 
 
-def lvl(event):
-    for y in event.items():
+def lvl(evt):
+    for y in evt.items():
         if type(y[1]) is list:
-            del event[y[0]]
-            ToEs(event, y[0])
+            del evt[y[0]]
+            ToEs(evt, y[0])
 
 
 def ToEs(doc, i):
