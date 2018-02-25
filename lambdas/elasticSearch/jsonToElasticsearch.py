@@ -4,7 +4,6 @@ import json
 import urllib.request
 
 es = 'https://search-syd-summit-2018-pdktt2gfyw7cbrtcr24rzieoxe.us-east-1.es.amazonaws.com'
-i = 'phd-events'
 
 
 def lmbd(event):
@@ -20,7 +19,7 @@ def rt(jsn):
             lst.append(w[0])
     for l in lst:
         jsn.pop(l)
-    ToEs(jsn)
+    ToEs(jsn, 'json-root')
 
 
 def sub(jsn):
@@ -38,7 +37,7 @@ def sub(jsn):
                 for z in k[:]:
                     sub(z)
                     lvl(z)
-                    ToEs(z)
+                    ToEs(z, x[0])
             except:
                 pass
 
@@ -47,12 +46,11 @@ def lvl(jsn):
     for y in jsn.items():
         if type(y[1]) is list:
             del jsn[y[0]]
-            ToEs(jsn)
+            ToEs(jsn, y[0])
 
 
-def ToEs(doc):
-    print(doc)
-    return
+def ToEs(doc, i):
+    i = 'phd-' + i.lower()
     jv = json.dumps(doc).encode('utf8')
     rq = urllib.request.Request(es + '/' + i + '/doc', jv, {'Content-Type': 'application/json'}, method='POST')
     f = urllib.request.urlopen(rq)
@@ -66,7 +64,7 @@ def listIndex():
     print(response.text)
     print('Finished listing - Existing...')
     sys.exit()
-#listIndex()
+listIndex()
 
 
 def deleteIndex():
