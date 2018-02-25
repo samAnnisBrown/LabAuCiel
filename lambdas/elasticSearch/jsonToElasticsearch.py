@@ -7,24 +7,29 @@ es = 'https://search-syd-summit-2018-pdktt2gfyw7cbrtcr24rzieoxe.us-east-1.es.ama
 
 
 def lmbd(event):
-    sub(event)      # Sub
-    rt(event)       # Root
+    print(event)
+    try:
+        sub(event)      # Sub
+        rt(event)       # Root
+    except:
+        pass
+    print(event)
     return event    # For Notifcation
 
 
-def rt(jsn):
+def rt(event):
     lst = []
-    for w in jsn.items():
+    for w in event.items():
         if type(w[1]) is dict:
             lst.append(w[0])
     for l in lst:
-        jsn.pop(l)
-    ToEs(jsn, 'json-root')
+        event.pop(l)
+    ToEs(event, 'json-root')
 
 
-def sub(jsn):
-    for x in jsn.items():
-        k = jsn[x[0]]
+def sub(event):
+    for x in event.items():
+        k = event[x[0]]
         vt = type(x[1])
         if vt is dict:
             try:
@@ -42,17 +47,17 @@ def sub(jsn):
                 pass
 
 
-def lvl(jsn):
-    for y in jsn.items():
+def lvl(event):
+    for y in event.items():
         if type(y[1]) is list:
-            del jsn[y[0]]
-            ToEs(jsn, y[0])
+            del event[y[0]]
+            ToEs(event, y[0])
 
 
 def ToEs(doc, i):
     i = 'phd-' + i.lower()
     jv = json.dumps(doc).encode('utf8')
-    rq = urllib.request.Request(es + '/' + i + '/doc', jv, {'Content-Type': 'application/json'}, method='POST')
+    rq = urllib.request.Request(es + '/' + i + '///doc', jv, {'Content-Type': 'application/json'}, method='POST')
     f = urllib.request.urlopen(rq)
     rsp = f.read()
     f.close()
@@ -64,7 +69,7 @@ def listIndex():
     print(response.text)
     print('Finished listing - Existing...')
     sys.exit()
-listIndex()
+#listIndex()
 
 
 def deleteIndex():
