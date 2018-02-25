@@ -2,19 +2,19 @@ import requests
 import sys
 import json
 import urllib.request
+import copy
 
 es = 'https://search-syd-summit-2018-pdktt2gfyw7cbrtcr24rzieoxe.us-east-1.es.amazonaws.com'
 
 
 def lmbd(event):
-    print(event)
+    ecpy = copy.deepcopy(event)
     try:
         sub(event)      # Sub
         rt(event)       # Root
     except:
         pass
-    print(event)
-    return event    # For Notifcation
+    return ecpy         # For Notifcation
 
 
 def rt(event):
@@ -57,7 +57,7 @@ def lvl(event):
 def ToEs(doc, i):
     i = 'phd-' + i.lower()
     jv = json.dumps(doc).encode('utf8')
-    rq = urllib.request.Request(es + '/' + i + '///doc', jv, {'Content-Type': 'application/json'}, method='POST')
+    rq = urllib.request.Request(es + '/' + i + '/doc', jv, {'Content-Type': 'application/json'}, method='POST')
     f = urllib.request.urlopen(rq)
     rsp = f.read()
     f.close()
