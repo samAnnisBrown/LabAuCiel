@@ -7,11 +7,11 @@ import copy
 es = 'https://search-syd-summit-2018-pdktt2gfyw7cbrtcr24rzieoxe.us-east-1.es.amazonaws.com'
 
 
-def lmbd(evt):
+def lmbd(evt, cxt):
     ic = copy.deepcopy(evt)  # Immutable copy of event
     try:
-        sub(evt)      # Sub
-        rt(evt)       # Root
+        sub(evt)      # Import Sub Keys
+        rt(evt)       # Import Root Keys
     except:
         pass
     return ic         # For Notifcation
