@@ -186,10 +186,7 @@ def lambda_handler(event, context):
                 
                 # Create the required JSON for Elasticsearch upload
                 lineHash = hashlib.md5(str(payload).encode('utf-8')).hexdigest()
-                #linesToUpload.append({"_index": indexName, "_type": "CostReport", "_id": payloadValuesOut[0], "_source": payload})
                 linesToUpload.append({"_index": indexName, "_type": "CostReport", "_id": lineHash, "_source": payload})
-                print(payload)
-                sys.exit()
 
                 # If linesToUpload is > 1000, complete a bulk upload
                 if len(linesToUpload) >= 250:
