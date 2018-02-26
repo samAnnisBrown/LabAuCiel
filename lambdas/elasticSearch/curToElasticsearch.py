@@ -117,7 +117,7 @@ def lambda_handler(event, context):
         indexName = ("cur-adoc-" + str(keyName).lower())
 
     # Remove existing index with same name (to avoid duplicate entries)
-    if args.dryrun is False:
+    if args.dryrun is False and '1.csv.gz' in key:
         print('Removing index ' + indexName + " to ensure there are no duplicates...")
         deleteElasticsearchIndex(indexName)
 
