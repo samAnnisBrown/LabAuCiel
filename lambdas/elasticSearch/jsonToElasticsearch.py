@@ -3,11 +3,13 @@ import sys
 import json
 import urllib.request
 import copy
+from time import sleep
 
-es = 'https://search-syd-summit-2018-pdktt2gfyw7cbrtcr24rzieoxe.us-east-1.es.amazonaws.com'
+es = 'https://elasticsearch-nlb-ec6325e5a5d3e3a8.elb.us-east-1.amazonaws.com'
 
 
 def lmbd(evt, cxt):
+    sleep(2)           # ENI Attachment
     ic = copy.deepcopy(evt)  # Immutable copy of event
     try:
         sub(evt)      # Import Sub Keys
@@ -69,7 +71,7 @@ def listIndex():
     print(response.text)
     print('Finished listing - Existing...')
     sys.exit()
-#listIndex()
+listIndex()
 
 
 def deleteIndex():
