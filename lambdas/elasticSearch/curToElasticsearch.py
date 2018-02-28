@@ -118,7 +118,7 @@ def lambda_handler(event, context):
 
     # Remove existing index with same name (to avoid duplicate entries)
     if args.dryrun is False and '1.csv.gz' in key:
-        print('[DELETING] - index ' + indexName + " to ensure there are no duplicates...")
+        print('[--DELETING--] - index ' + indexName + " to ensure there are no duplicates...")
         deleteElasticsearchIndex(indexName)
 
     # Prepare variables
@@ -201,10 +201,6 @@ def lambda_handler(event, context):
     print("")
     global totalLinesUploadedCount
     totalLinesUploadedCount = 0
-    s3file = None
-    bytestream = None
-    outfile = None
-    gc.collect()
 
 
 def uploadToElasticsearch(actions, indexName):
@@ -332,7 +328,7 @@ if customerImport:
         del curFiles[key]
 
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
-    print('[CHOSE] - file ' + sortedCur[0][0] + ' with date ' + sortedCur[0][1])
+    print('[CHOSE] - file "' + sortedCur[0][0] + '" with date "' + sortedCur[0][1] + '"')
     folderHash = re.search(".*/(.+-.+-.+-.+)/.+", sortedCur[0][0]).group(1)
 
 
@@ -369,4 +365,4 @@ if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event 
                 ]
             }, "")
 
-print("-- Finished --")
+print("--Finished--")
