@@ -7,7 +7,6 @@ import requests     # To interact with Elasticsearch (like curl)
 import argparse     # For all the aguments
 import operator     # For some sorting stuff
 import hashlib      # MD5 Hashes for each line
-import gc           # Garbage Collection - in an effort to clear memory between files
 
 from gzip import GzipFile       # So we can gunzip stuff
 from io import BytesIO          # Stream bytes from S3
@@ -55,7 +54,7 @@ parser.add_argument('--dryrun',
 
 args = parser.parse_args()
 
-gzipFiles = []
+
 
 try:
     if args.customer.lower() == 'rmit':
@@ -274,20 +273,20 @@ def returnS3Auth():
 
 
 # Index Functions
-if args.index_list:
-    response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
+def listIndex(esEndpoint):
+    response = requests.get('http://' + esEndpoint + '/_cat/indices?v&pretty')
     print(response.text)
     print('[LISTING] - Indices')
     sys.exit()
 
-if args.index_delete:
-    print('[--DELETING--] - Index ' + args.index_delete)
-    response = requests.delete('http://' + args.elasticsearch_endpoint + '/' + args.index_delete + '?pretty')
+
+def deleteIndex(indexName, esEndpoint):
+    print('[--DELETING--] - Index ' + indexName)
+    response = requests.delete('http://' + esEndpoint + '/' + indexName + '?pretty')
     print(response.text)
     sys.exit()
 
-# Load Functions
-if customerImport:
+def getLatestCurFile():
     # Create dit/list
     curFiles = {}
     outputList = []
@@ -328,34 +327,36 @@ if customerImport:
         del curFiles[key]
 
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
-    print('[CHOSE] - file "' + sortedCur[0][0] + '" with date "' + sortedCur[0][1] + '"')
+    #print('[CHOSE] - file "' + sortedCur[0][0] + '" with date "' + sortedCur[0][1] + '"')
     folderHash = re.search(".*/(.+-.+-.+-.+)/.+", sortedCur[0][0]).group(1)
 
+    gzipFiles = []
 
     for listObjectsOutput in outputList:
         for s3Object in listObjectsOutput['Contents']:
             if 'csv.gz' in s3Object['Key'] and folderHash in s3Object['Key']:
                 gzipFiles.append(s3Object['Key'])
 
-    if len(gzipFiles) > 1:
-        print("[FOUND] - the following associated files...")
-        for file in gzipFiles:
-            print("- " + file)
+    #if len(gzipFiles) > 1:
+    print("[FOUND] - the following associated file(s) from " + sortedCur[0][1])
+    for file in gzipFiles:
+        print("- " + file)
 
-    args.key = sortedCur[0][0]
+    #return sortedCur[0][0], gzipFiles
+    return gzipFiles
 
 
-if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
-    if args.bucket is None or args.key is None:
+def manualCurImport(bucket, keys):
+    if bucket is None or keys < 1:
         print('Set both --bucket and --key need to location of the CUR file in S3 you want to import.')
     else:
-        for key in gzipFiles:
+        for key in keys:
             lambda_handler({
                 "Records": [
                     {
                         "s3": {
                             "bucket": {
-                                "name": args.bucket,
+                                "name": bucket,
                             },
                             "object": {
                                 "key": key,
@@ -364,5 +365,15 @@ if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event 
                     }
                 ]
             }, "")
+
+
+if args.index_delete:
+    deleteIndex(args.index_delete, args.elasticsearch_endpoint)
+if args.index_list:
+    listIndex(args.elasticsearch_endpoint)
+if customerImport:
+    args.key = getLatestCurFile()
+if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
+    manualCurImport(args.bucket, args.key)
 
 print("--Finished--")
