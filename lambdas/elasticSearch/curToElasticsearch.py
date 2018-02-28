@@ -88,7 +88,7 @@ totalLinesCount = 0  # Do not modify
 
 # Lambda/Main Import Function
 def lambda_handler(event, context):
-    print('Running main import function')
+    print('[RUNNING] - main import function')
     sleep(3)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
 
     # Retrieve S3 object from event
@@ -97,12 +97,12 @@ def lambda_handler(event, context):
 
     # Download S3 file
     s3 = returnS3Auth()
-    print('Downloading \"' + bucket + '/' + key + '\" from S3')
+    print('[DOWNLOADING] - \"' + bucket + '/' + key + '\" from S3')
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
     # Unzip into memory
     # TODO use scratch space on disk instead? Lambda has only 500Mb though :(
-    print('Unzipping into memory - depending on the size of the CUR, this could take a while...')
+    print('[UNZIPPING] - into memory - depending on the size of the CUR, this could take a while...')
     bytestream = BytesIO(s3file['Body'].read())
     outfile = GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
 
@@ -118,7 +118,7 @@ def lambda_handler(event, context):
 
     # Remove existing index with same name (to avoid duplicate entries)
     if args.dryrun is False and '1.csv.gz' in key:
-        print('Removing index ' + indexName + " to ensure there are no duplicates...")
+        print('[DELETING] - index ' + indexName + " to ensure there are no duplicates...")
         deleteElasticsearchIndex(indexName)
 
     # Prepare variables
@@ -280,11 +280,11 @@ def returnS3Auth():
 if args.index_list:
     response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
     print(response.text)
-    print('Finished listing - Existing...')
+    print('[LISTING] - Indices')
     sys.exit()
 
 if args.index_delete:
-    print('Deleting index ' + args.index_delete)
+    print('[DELETING] - Index ' + args.index_delete)
     response = requests.delete('http://' + args.elasticsearch_endpoint + '/' + args.index_delete + '?pretty')
     print(response.text)
     sys.exit()
@@ -339,7 +339,7 @@ if customerImport:
         for s3Object in listObjectsOutput['Contents']:
             if 'csv.gz' in s3Object['Key'] and folderHash in s3Object['Key']:
                 gzipFiles.append(s3Object['Key'])
-    print("Grabbing the following files...")
+    print("[FOUND] - the following files...")
     for file in gzipFiles:
         print("- " + file)
     args.key = sortedCur[0][0]
@@ -365,4 +365,4 @@ if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event 
                 ]
             }, "")
 
-print("Finished")
+print("-- Finished --")
