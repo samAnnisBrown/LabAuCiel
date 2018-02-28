@@ -339,7 +339,7 @@ if customerImport:
         for s3Object in listObjectsOutput['Contents']:
             if 'csv.gz' in s3Object['Key'] and folderHash in s3Object['Key']:
                 gzipFiles.append(s3Object['Key'])
-    print("[FOUND] - the following files...")
+    print("[FOUND] - the following associated files...")
     for file in gzipFiles:
         print("- " + file)
     args.key = sortedCur[0][0]
