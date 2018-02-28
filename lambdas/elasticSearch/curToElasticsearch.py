@@ -335,7 +335,7 @@ def getLatestCurFile():
 
     print("[FOUND] - the following CUR file(s) with timestamp \"" + sortedCur[0][1] + "\"\n")
     for file in gzipFiles:
-        print("* " + file)
+        print("* s3://" + args.bucket + "/" + file)
     print("")
 
     return gzipFiles
