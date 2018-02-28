@@ -333,12 +333,11 @@ def getLatestCurFile():
             if 'csv.gz' in s3Object['Key'] and folderHash in s3Object['Key']:
                 gzipFiles.append(s3Object['Key'])
 
-    #if len(gzipFiles) > 1:
-    print("[FOUND] - the following CUR file(s) with timestamp \"" + sortedCur[0][1] + "\"")
+    print("[FOUND] - the following CUR file(s) with timestamp \"" + sortedCur[0][1] + "\"\n")
     for file in gzipFiles:
         print("* " + file)
+    print("")
 
-    #return sortedCur[0][0], gzipFiles
     return gzipFiles
 
 
