@@ -216,11 +216,11 @@ def uploadToElasticsearch(actions, indexName):
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
 
         helpers.bulk(es, actions)
-        print(str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
+        print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
     else:
         totalLinesUploadedCount += len(actions)
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
-        print("DRYRUN - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
+        print("[DRYRUN] - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
 
 
 def listElasticsearchIndices():
@@ -331,7 +331,7 @@ if customerImport:
         del curFiles[key]
 
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
-    print('File ' + sortedCur[0][0] + ' chosen with date ' + sortedCur[0][1])
+    print('[CHOSE] - file ' + sortedCur[0][0] + ' with date ' + sortedCur[0][1])
     folderHash = re.search(".*/(.+-.+-.+-.+)/.+", sortedCur[0][0]).group(1)
 
 
