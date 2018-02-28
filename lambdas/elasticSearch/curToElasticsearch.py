@@ -87,8 +87,7 @@ totalLinesCount = 0  # Do not modify
 
 # Lambda/Main Import Function
 def lambda_handler(event, context):
-    print('[RUNNING] - main import function')
-    sleep(3)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
+    sleep(1)  # If lambda is in a VPC, DNS resolution isn't immediate as the ENI is attached - wait a bit just to make sure we can resolve S3 and ES
 
     # Retrieve S3 object from event
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
@@ -96,12 +95,12 @@ def lambda_handler(event, context):
 
     # Download S3 file
     s3 = returnS3Auth()
-    print('[DOWNLOADING] - \"' + bucket + '/' + key + '\" from S3')
+    print('[DOWNLOADING] - \"' + bucket + '/' + key + '\"')
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
     # Unzip into memory
     # TODO use scratch space on disk instead? Lambda has only 500Mb though :(
-    print('[UNZIPPING] - into memory - depending on the size of the CUR, this could take a while...')
+    print('[UNZIPPING] - into memory.  Depending on the size of the CUR, this could take a while...')
     bytestream = BytesIO(s3file['Body'].read())
     outfile = GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
 
@@ -117,7 +116,7 @@ def lambda_handler(event, context):
 
     # Remove existing index with same name (to avoid duplicate entries)
     if args.dryrun is False and '1.csv.gz' in key:
-        print('[--DELETING--] - index ' + indexName + " to ensure there are no duplicates...")
+        print('[!!!-DELETING-!!!] - index ' + indexName + " to ensure there are no duplicates...")
         deleteElasticsearchIndex(indexName)
 
     # Prepare variables
