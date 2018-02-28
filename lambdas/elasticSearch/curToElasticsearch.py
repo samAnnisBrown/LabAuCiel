@@ -295,12 +295,10 @@ def getLatestCurFile():
     s3 = returnS3Auth()
     # Get s3 objects and display length
     listObjectsOutput = s3.list_objects_v2(Bucket=args.bucket)
-    #print('S3 objects retrieved in this call: ' + str(len(listObjectsOutput['Contents'])))
     # While the list is truncated, keep calling an appending to outputList
     while listObjectsOutput['IsTruncated']:
         outputList.append(listObjectsOutput)
         listObjectsOutput = s3.list_objects_v2(Bucket=args.bucket, ContinuationToken=listObjectsOutput['NextContinuationToken'])
-        #print('S3 objects retrieved in this call: ' + str(len(listObjectsOutput['Contents'])))
     outputList.append(listObjectsOutput)
 
     # Let's make a new list that only contains CUR files (csv.gz)
@@ -327,7 +325,6 @@ def getLatestCurFile():
         del curFiles[key]
 
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
-    #print('[CHOSE] - file "' + sortedCur[0][0] + '" with date "' + sortedCur[0][1] + '"')
     folderHash = re.search(".*/(.+-.+-.+-.+)/.+", sortedCur[0][0]).group(1)
 
     gzipFiles = []
