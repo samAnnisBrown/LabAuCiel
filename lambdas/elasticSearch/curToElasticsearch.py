@@ -284,7 +284,7 @@ if args.index_list:
     sys.exit()
 
 if args.index_delete:
-    print('[DELETING] - Index ' + args.index_delete)
+    print('[--DELETING--] - Index ' + args.index_delete)
     response = requests.delete('http://' + args.elasticsearch_endpoint + '/' + args.index_delete + '?pretty')
     print(response.text)
     sys.exit()
