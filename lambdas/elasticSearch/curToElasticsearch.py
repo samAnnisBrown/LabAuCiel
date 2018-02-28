@@ -338,9 +338,9 @@ def getLatestCurFile():
                 gzipFiles.append(s3Object['Key'])
 
     #if len(gzipFiles) > 1:
-    print("[FOUND] - the following associated file(s) from " + sortedCur[0][1])
+    print("[FOUND] - the following CUR file(s) with timestamp \"" + sortedCur[0][1] + "\"")
     for file in gzipFiles:
-        print("- " + file)
+        print("* " + file)
 
     #return sortedCur[0][0], gzipFiles
     return gzipFiles
