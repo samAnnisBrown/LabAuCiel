@@ -276,6 +276,7 @@ def returnS3Auth():
 
     return s3
 
+
 # Index Functions
 if args.index_list:
     response = requests.get('http://' + args.elasticsearch_endpoint + '/_cat/indices?v&pretty')
