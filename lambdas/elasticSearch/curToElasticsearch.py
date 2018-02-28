@@ -347,7 +347,7 @@ def getLatestCurFile():
 
 
 def manualCurImport(bucket, keys):
-    if bucket is None or keys < 1:
+    if bucket is None or len(keys) < 1:
         print('Set both --bucket and --key need to location of the CUR file in S3 you want to import.')
     else:
         for key in keys:
