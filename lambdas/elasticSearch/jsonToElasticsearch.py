@@ -2,62 +2,46 @@ import requests
 import sys
 import json
 import urllib.request
-import copy
 from time import sleep
 
 es = 'https://elasticsearch-nlb-ec6325e5a5d3e3a8.elb.us-east-1.amazonaws.com'
 
 
-def lmbd(evt, cxt):
-    sleep(2)           # ENI Attachment
-    ic = copy.deepcopy(evt)  # Immutable copy of event
-    try:
-        sub(evt)      # Import Sub Keys
-        rt(evt)       # Import Root Keys
-    except:
-        pass
-    return ic         # For Notifcation
+def lambdaFunction(event, context):
+    sleep(1)                    # For ENI attach
+    rt = getJsonRoot(event)     # Get root level of Json only
+    getJsonLevels(event, rt)    # Get Json lower levels and merge with root
 
 
-def rt(evt):
-    lst = []
-    for w in evt.items():
-        if type(w[1]) is dict:
-            lst.append(w[0])
-    for l in lst:
-        evt.pop(l)
-    ToEs(evt, 'json-root')
+def getJsonRoot(jsn):
+    out = {}
+    for i in jsn.items():
+        if type(i[1]) is str:
+            out[i[0]] = i[1]
+    return out
 
 
-def sub(evt):
-    for x in evt.items():
-        k = evt[x[0]]
+def getJsonLevels(jsn, rt):
+    for x in jsn.items():
+        k = jsn[x[0]]
         vt = type(x[1])
         if vt is dict:
-            try:
-                sub(k)
-                lvl(k)
-            except:
-                pass
+            getJsonLevels(k, rt)
+            ToEs(mergeJson(rt, k))
         elif vt is list:
-            try:
-                for z in k[:]:
-                    sub(z)
-                    lvl(z)
-                    ToEs(z, x[0])
-            except:
-                pass
+            for z in k[:]:
+                getJsonLevels(z, rt)
+                ToEs(mergeJson(rt, z))
 
 
-def lvl(evt):
-    for y in evt.items():
-        if type(y[1]) is list:
-            del evt[y[0]]
-            ToEs(evt, y[0])
+def mergeJson(a, b):
+    for item in a.items():
+        b[item[0]] = item[1]
+    return b
 
 
-def ToEs(doc, i):
-    i = 'phd-' + i.lower()
+def ToEs(doc):
+    i = 'phd-events'
     jv = json.dumps(doc).encode('utf8')
     rq = urllib.request.Request(es + '/' + i + '/doc', jv, {'Content-Type': 'application/json'}, method='POST')
     f = urllib.request.urlopen(rq)
@@ -71,7 +55,7 @@ def listIndex():
     print(response.text)
     print('Finished listing - Existing...')
     sys.exit()
-listIndex()
+#listIndex()
 
 
 def deleteIndex():
@@ -82,160 +66,165 @@ def deleteIndex():
     sys.exit()
 #deleteIndex()
 
-lmbd({
-    "AttachTime": "2018-02-22T13:34:16.000Z",
-    "Device": "/dev/xvda",
-    "InstanceId": "i-09b690d965c936370",
-    "State": "in-use",
-    "VolumeId": "vol-0a9ef3427f6af0241",
-    "DeleteOnTermination": "true",
+lambdaFunction({
     "AvailabilityZone": "us-east-1d",
-    "CreateTime": "2018-02-22T13:34:15.957Z",
+    "CreateTime": "26 Feb 2018 12:23:49",
     "Encrypted": "false",
     "Size": 20,
-    "SnapshotId": "snap-00ef4561bf667ec79",
-    "Tags": [],
+    "SnapshotId": "snap-0a204661289b541e0",
+    "State": "in-use",
+    "VolumeId": "vol-0fa020a7106de56b1",
     "VolumeType": "standard",
+    "Attachment": {
+        "AttachTime": "26 Feb 2018 12:23:49",
+        "Device": "/dev/xvda",
+        "InstanceId": "i-0a27db4e6eb409ae7",
+        "State": "attached",
+        "VolumeId": "vol-0fa020a7106de56b1",
+        "DeleteOnTermination": "false"
+    },
+    "PhdEventTime": "07 Feb 2017 00:55:52",
+    "PhdEventId": "b141e3d0-b1ce-37c6-2b63-2ac4a53a39db",
     "ResourceStack": {
         "StackName": "DemoApp01",
         "StackStatus": "UPDATE_COMPLETE",
         "StackEvents": [
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "7f0132d0-1852-11e8-9bd0-5044763dbb7b",
+                "EventId": "115e7480-1af6-11e8-8743-500c3d4416c5",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "DemoApp01",
                 "PhysicalResourceId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
                 "ResourceType": "AWS::CloudFormation::Stack",
-                "Timestamp": "2018-02-23T04:32:03.177000+00:00",
+                "Timestamp": "2018-02-26T13:07:59.026000+00:00",
                 "ResourceStatus": "UPDATE_COMPLETE"
             },
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "EC2Instance-7ff618bc-3919-4910-a1ad-f863f76763a1",
+                "EventId": "EC2Instance-3f3b85d2-aa52-4a25-90ca-f69393d3d497",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "EC2Instance",
-                "PhysicalResourceId": "i-09b690d965c936370",
+                "PhysicalResourceId": "i-0a27db4e6eb409ae7",
                 "ResourceType": "AWS::EC2::Instance",
-                "Timestamp": "2018-02-23T04:32:02.675000+00:00",
+                "Timestamp": "2018-02-26T13:07:58.594000+00:00",
                 "ResourceStatus": "DELETE_COMPLETE"
             },
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "EC2Instance-5e67dd74-1b02-4d5f-ad1c-4085f738af44",
+                "EventId": "EC2Instance-3a9c4429-82ba-447f-aa67-3c0ea330ad60",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "EC2Instance",
-                "PhysicalResourceId": "i-09b690d965c936370",
+                "PhysicalResourceId": "i-0a27db4e6eb409ae7",
                 "ResourceType": "AWS::EC2::Instance",
-                "Timestamp": "2018-02-23T04:31:15.549000+00:00",
+                "Timestamp": "2018-02-26T13:06:50.777000+00:00",
                 "ResourceStatus": "DELETE_IN_PROGRESS"
             },
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "618b3ca0-1852-11e8-ba5e-50fae97e0835",
+                "EventId": "e7ba5c20-1af5-11e8-9806-50a686e4bbe6",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "DemoApp01",
                 "PhysicalResourceId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
                 "ResourceType": "AWS::CloudFormation::Stack",
-                "Timestamp": "2018-02-23T04:31:13.743000+00:00",
+                "Timestamp": "2018-02-26T13:06:49.171000+00:00",
                 "ResourceStatus": "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS"
             },
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "EIPAssoc0-UPDATE_COMPLETE-2018-02-23T04:31:11.208Z",
+                "EventId": "EIPAssoc0-UPDATE_COMPLETE-2018-02-26T13:06:46.678Z",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "EIPAssoc0",
-                "PhysicalResourceId": "eipassoc-54ab8eed",
+                "PhysicalResourceId": "eipassoc-3b92b182",
                 "ResourceType": "AWS::EC2::EIPAssociation",
-                "Timestamp": "2018-02-23T04:31:11.208000+00:00",
+                "Timestamp": "2018-02-26T13:06:46.678000+00:00",
                 "ResourceStatus": "UPDATE_COMPLETE",
-                "ResourceProperties": "{\"InstanceId\":\"i-058e15c2cb5a0efeb\",\"AllocationId\":\"eipalloc-1e3c6328\"}"
+                "ResourceProperties": "{\"InstanceId\":\"i-0482c543699712c84\",\"AllocationId\":\"eipalloc-1e3c6328\"}"
             },
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "EIPAssoc0-UPDATE_IN_PROGRESS-2018-02-23T04:30:38.415Z",
+                "EventId": "EIPAssoc0-UPDATE_IN_PROGRESS-2018-02-26T13:06:13.492Z",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "EIPAssoc0",
-                "PhysicalResourceId": "eipassoc-a4560c1d",
+                "PhysicalResourceId": "eipassoc-a381a21a",
                 "ResourceType": "AWS::EC2::EIPAssociation",
-                "Timestamp": "2018-02-23T04:30:38.415000+00:00",
+                "Timestamp": "2018-02-26T13:06:13.492000+00:00",
                 "ResourceStatus": "UPDATE_IN_PROGRESS",
-                "ResourceProperties": "{\"InstanceId\":\"i-058e15c2cb5a0efeb\",\"AllocationId\":\"eipalloc-1e3c6328\"}"
+                "ResourceProperties": "{\"InstanceId\":\"i-0482c543699712c84\",\"AllocationId\":\"eipalloc-1e3c6328\"}"
             },
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "EC2Instance-UPDATE_COMPLETE-2018-02-23T04:30:35.736Z",
+                "EventId": "EC2Instance-UPDATE_COMPLETE-2018-02-26T13:06:10.169Z",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "EC2Instance",
-                "PhysicalResourceId": "i-058e15c2cb5a0efeb",
+                "PhysicalResourceId": "i-0482c543699712c84",
                 "ResourceType": "AWS::EC2::Instance",
-                "Timestamp": "2018-02-23T04:30:35.736000+00:00",
+                "Timestamp": "2018-02-26T13:06:10.169000+00:00",
                 "ResourceStatus": "UPDATE_COMPLETE",
-                "ResourceProperties": "{\"KeyName\":\"demoenv-us-east-1\",\"ImageId\":\"ami-b45cbfc9\",\"InstanceType\":\"t2.small\",\"Tags\":[{\"Value\":\"DemoApp01\",\"Key\":\"Name\"}]}"
+                "ResourceProperties": "{\"KeyName\":\"demoenv-us-east-1\",\"ImageId\":\"ami-42dc353f\",\"InstanceType\":\"t2.small\",\"Tags\":[{\"Value\":\"DemoApp01\",\"Key\":\"Name\"}]}"
             },
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "EC2Instance-UPDATE_IN_PROGRESS-2018-02-23T04:30:02.504Z",
+                "EventId": "EC2Instance-UPDATE_IN_PROGRESS-2018-02-26T13:05:36.524Z",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "EC2Instance",
-                "PhysicalResourceId": "i-058e15c2cb5a0efeb",
+                "PhysicalResourceId": "i-0482c543699712c84",
                 "ResourceType": "AWS::EC2::Instance",
-                "Timestamp": "2018-02-23T04:30:02.504000+00:00",
+                "Timestamp": "2018-02-26T13:05:36.524000+00:00",
                 "ResourceStatus": "UPDATE_IN_PROGRESS",
                 "ResourceStatusReason": "Resource creation Initiated",
-                "ResourceProperties": "{\"KeyName\":\"demoenv-us-east-1\",\"ImageId\":\"ami-b45cbfc9\",\"InstanceType\":\"t2.small\",\"Tags\":[{\"Value\":\"DemoApp01\",\"Key\":\"Name\"}]}"
+                "ResourceProperties": "{\"KeyName\":\"demoenv-us-east-1\",\"ImageId\":\"ami-42dc353f\",\"InstanceType\":\"t2.small\",\"Tags\":[{\"Value\":\"DemoApp01\",\"Key\":\"Name\"}]}"
             },
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "EC2Instance-UPDATE_IN_PROGRESS-2018-02-23T04:30:00.901Z",
+                "EventId": "EC2Instance-UPDATE_IN_PROGRESS-2018-02-26T13:05:34.847Z",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "EC2Instance",
-                "PhysicalResourceId": "i-09b690d965c936370",
+                "PhysicalResourceId": "i-0a27db4e6eb409ae7",
                 "ResourceType": "AWS::EC2::Instance",
-                "Timestamp": "2018-02-23T04:30:00.901000+00:00",
+                "Timestamp": "2018-02-26T13:05:34.847000+00:00",
                 "ResourceStatus": "UPDATE_IN_PROGRESS",
                 "ResourceStatusReason": "Requested update requires the creation of a new physical resource; hence creating one.",
-                "ResourceProperties": "{\"KeyName\":\"demoenv-us-east-1\",\"ImageId\":\"ami-b45cbfc9\",\"InstanceType\":\"t2.small\",\"Tags\":[{\"Value\":\"DemoApp01\",\"Key\":\"Name\"}]}"
+                "ResourceProperties": "{\"KeyName\":\"demoenv-us-east-1\",\"ImageId\":\"ami-42dc353f\",\"InstanceType\":\"t2.small\",\"Tags\":[{\"Value\":\"DemoApp01\",\"Key\":\"Name\"}]}"
             },
             {
                 "StackId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
-                "EventId": "3063c570-1852-11e8-b821-500c28b23699",
+                "EventId": "b6cfedf0-1af5-11e8-9ebd-500c286374d1",
                 "StackName": "DemoApp01",
                 "LogicalResourceId": "DemoApp01",
                 "PhysicalResourceId": "arn:aws:cloudformation:us-east-1:022787131977:stack/DemoApp01/a686c400-16bd-11e8-bec1-503aca4a58fd",
                 "ResourceType": "AWS::CloudFormation::Stack",
-                "Timestamp": "2018-02-23T04:29:51.258000+00:00",
+                "Timestamp": "2018-02-26T13:05:27.042000+00:00",
                 "ResourceStatus": "UPDATE_IN_PROGRESS",
                 "ResourceStatusReason": "User Initiated"
             }
         ]
     },
     "RestoredResources": {
-        "RestoreSnapshotId": "snap-0d280e23d972abff1",
-        "RestoreImageId": "ami-b45cbfc9",
-        "ReplacementInstance": "i-058e15c2cb5a0efeb",
+        "RestoreSnapshotId": "snap-00f3d5c47f34cb313",
+        "RestoreImageId": "ami-42dc353f",
+        "ReplacementInstance": "i-0482c543699712c84",
         "RestoredVolumes": [
             {
                 "Attachments": [
                     {
-                        "AttachTime": "2018-02-23T04:30:02+00:00",
+                        "AttachTime": "2018-02-26T13:05:37+00:00",
                         "Device": "/dev/xvda",
-                        "InstanceId": "i-058e15c2cb5a0efeb",
+                        "InstanceId": "i-0482c543699712c84",
                         "State": "attached",
-                        "VolumeId": "vol-0f412dda19c769e8c",
-                        "DeleteOnTermination": "true"
+                        "VolumeId": "vol-07b041a1d34abd4c1",
+                        "DeleteOnTermination": "false"
                     }
                 ],
                 "AvailabilityZone": "us-east-1d",
-                "CreateTime": "2018-02-23T04:30:02.645000+00:00",
+                "CreateTime": "2018-02-26T13:05:37.212000+00:00",
                 "Encrypted": "false",
                 "Size": 20,
-                "SnapshotId": "snap-0d280e23d972abff1",
+                "SnapshotId": "snap-00f3d5c47f34cb313",
                 "State": "in-use",
-                "VolumeId": "vol-0f412dda19c769e8c",
+                "VolumeId": "vol-07b041a1d34abd4c1",
                 "VolumeType": "standard"
             }
         ]
     }
-    })
+    }, '')
 
