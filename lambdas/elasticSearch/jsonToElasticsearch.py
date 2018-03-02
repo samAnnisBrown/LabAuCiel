@@ -8,9 +8,13 @@ es = 'https://elasticsearch-nlb-ec6325e5a5d3e3a8.elb.us-east-1.amazonaws.com'
 
 
 def lambdaFunction(event, context):
-    sleep(1)                    # For ENI attach
-    rt = getJsonRoot(event)     # Get root level of Json only
-    getJsonLevels(event, rt)    # Get Json lower levels and merge with root
+    try:
+        sleep(1)                    # For ENI attach
+        rt = getJsonRoot(event)     # Get root level of Json only
+        getJsonLevels(event, rt)    # Get Json lower levels and merge with root
+    except:
+        pass
+    return event
 
 
 def getJsonRoot(jsn):
