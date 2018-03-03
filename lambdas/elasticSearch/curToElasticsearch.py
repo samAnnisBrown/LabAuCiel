@@ -6,7 +6,6 @@ import sys          # To exit the script when things go wrong or are finished
 import requests     # To interact with Elasticsearch (like curl)
 import argparse     # For all the aguments
 import operator     # For some sorting stuff
-import hashlib      # MD5 Hashes for each line
 
 from gzip import GzipFile       # So we can gunzip stuff
 from io import BytesIO          # Stream bytes from S3
@@ -192,8 +191,7 @@ def lambda_handler(event, context):
                 payload = dict(zip(payloadKeys, payloadValuesOut))
                 
                 # Create the required JSON for Elasticsearch upload
-                lineHash = hashlib.md5(str(payload).encode('utf-8')).hexdigest()
-                linesToUpload.append({"_index": indexName, "_type": "CostReport", "_id": lineHash, "_source": payload})
+                linesToUpload.append({"_index": indexName, "_type": "CostReport", "_source": payload})
 
                 # If linesToUpload is > 1000, complete a bulk upload
                 if len(linesToUpload) >= 250:
@@ -242,7 +240,7 @@ def returnElasticsearchAuth():
         awsauth = AWSRequestsAuth(aws_access_key=os.environ['AWS_ACCESS_KEY_ID'],
                                   aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
                                   aws_token=os.environ['AWS_SESSION_TOKEN'],
-                                  aws_host=args.elasticsearch_endpointost,
+                                  aws_host=args.elasticsearch_endpoint,
                                   aws_region='ap-southeast-2',
                                   aws_service='es')
     else:
