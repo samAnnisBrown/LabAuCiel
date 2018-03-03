@@ -54,7 +54,6 @@ parser.add_argument('--dryrun',
 args = parser.parse_args()
 
 
-
 try:
     if args.customer.lower() == 'rmit':
         args.role_arn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
@@ -80,8 +79,8 @@ except AttributeError:
     customerImport = False
 
 # Global Variables
-totalLinesUploadedCount = 0  # Do not modify
-totalLinesCount = 0  # Do not modify
+totalLinesUploadedCount = 0     # Do not modify
+totalLinesCount = 0             # Do not modify
 
 
 # Lambda/Main Import Function
@@ -98,12 +97,11 @@ def lambda_handler(event, context):
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
     # Unzip into memory
-    # TODO use scratch space on disk instead? Lambda has only 500Mb though :(
     print('[UNZIPPING] - into memory.  Depending on the size of the CUR, this could take a while...')
     bytestream = BytesIO(s3file['Body'].read())
     outfile = GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
 
-    # Build Index Name - if triggered from default CUR key, will include year/month - otherwise, only filename
+    # Build Index Name - if triggered from default CUR key, will include year/month of CUR - if ad-hoc dump, then only filename
     try:
         reportMonth = re.search(".*/(\d+-\d+)/", key).group(1).split("-")[0][:-2]
         # reportName = (re.search("(.+?)/", key)).group(1)
@@ -113,7 +111,8 @@ def lambda_handler(event, context):
         keyName = (re.search("(.+.)csv.gz", key)).group(1)
         indexName = ("cur-adoc-" + str(keyName).lower())
 
-    # Remove existing index with same name (to avoid duplicate entries)
+    # Remove existing index with same name (to avoid duplicate entries) if first file in set
+    # TODO See about hashing each line so that it has a unique _id field - this should allow the removal of this step
     if args.dryrun is False and '1.csv.gz' in key:
         print('[!!!-DELETING-!!!] - index ' + indexName + " to ensure there are no duplicates...")
         deleteElasticsearchIndex(indexName)
@@ -129,14 +128,14 @@ def lambda_handler(event, context):
         if count == 1:  # Header Row: retrieve field names
             payloadKeysIn = list(csv.reader([line]))[0]  # need to encapsulate/decapsulate list for csv.reader to work
 
-            # Replace '/' with '_' for field names.  Makes life easier in Elasticsearch
+            # Replace '/' and ':' with '_' for field names - these symbols clash with search syntax in Elasticsearch
             payloadKeys = []
             for value in payloadKeysIn:
                 value = value.replace('/', '_')
                 value = value.replace(':', '_')
                 payloadKeys.append(value)
 
-            # Determine index location for certain columns to be Integers or Floats
+            # Columns with the below names will be numbers in Elasticsearch (so we can do math on them)
             forceFloat = ['lineItem_UsageAmount',
                           'lineItem_NormalizationFactor',
                           'lineItem_NormalizedUsageAmount',
@@ -167,12 +166,12 @@ def lambda_handler(event, context):
             for i, k in enumerate(payloadKeys):
                 if k in forceFloat:
                     floatIndexNumbers.append(i)
-        else:
+        else:   # Not header row - let's start uploading
             # Report Body
             payloadValuesOut = []
             payloadValuesRaw = list(csv.reader([line]))[0]
 
-            # Convert integers and floats to numbers in the output JSON
+            # Convert floats to numbers in the output JSON
             for index, value in enumerate(payloadValuesRaw):
                 if index in floatIndexNumbers:
                     try:
@@ -187,13 +186,13 @@ def lambda_handler(event, context):
             if len(payloadValuesOut) != len(payloadKeys):
                 print("Line " + str(count) + " is " + str(len(payloadValuesOut)) + ". Should be " + str(len(payloadKeys)) + "." + " -- " + str(payloadValuesOut))
             else:
-                # Created the individual line payload
+                # Create the individual line payload
                 payload = dict(zip(payloadKeys, payloadValuesOut))
                 
                 # Create the required JSON for Elasticsearch upload
                 linesToUpload.append({"_index": indexName, "_type": "CostReport", "_source": payload})
 
-                # If linesToUpload is > 1000, complete a bulk upload
+                # If linesToUpload is > 250, complete a bulk upload
                 if len(linesToUpload) >= 250:
                     uploadToElasticsearch(linesToUpload, indexName)
                     linesToUpload = []
@@ -208,6 +207,7 @@ def lambda_handler(event, context):
     totalLinesUploadedCount = 0
 
 
+# Handles the uploading of files to the Elasticsearch endpoint, and printing upload details
 def uploadToElasticsearch(actions, indexName):
     global totalLinesUploadedCount
 
@@ -224,16 +224,7 @@ def uploadToElasticsearch(actions, indexName):
         print("[DRYRUN] - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
 
 
-def listElasticsearchIndices():
-    es = returnElasticsearchAuth()
-    print(es.indices.get_alias("*"))
-
-
-def deleteElasticsearchIndex(indexName):
-    es = returnElasticsearchAuth()
-    es.indices.delete(index=indexName, ignore=[400, 404])
-
-
+# Return ES auth, depending on whether it's in a Lambda function or not
 def returnElasticsearchAuth():
     if not args.cur_load:
         # Retrieve Access details (Lambda IAM role must have access to ES domain to work)
@@ -257,6 +248,7 @@ def returnElasticsearchAuth():
     return es
 
 
+# Return S3 auth, either via STS assume role, or direct local credentials
 def returnS3Auth():
     if args.role_arn is not None:
         client = boto3.client('sts')
@@ -278,21 +270,23 @@ def returnS3Auth():
     return s3
 
 
-# Index Functions
+# List ES indices
 def listIndex(esEndpoint):
-    response = requests.get('http://' + esEndpoint + '/_cat/indices?v&pretty')
+    response = requests.get('https://' + esEndpoint + '/_cat/indices?v&pretty')
     print(response.text)
     print('[LISTING] - Indices')
     sys.exit()
 
 
+# Delete ES index
 def deleteIndex(indexName, esEndpoint):
     print('[--DELETING--] - Index ' + indexName)
-    response = requests.delete('http://' + esEndpoint + '/' + indexName + '?pretty')
+    response = requests.delete('https://' + esEndpoint + '/' + indexName + '?pretty')
     print(response.text)
     sys.exit()
 
 
+# Grab list of CUR files for upload
 def getLatestCurFile():
     # Create dit/list
     curFiles = {}
@@ -334,21 +328,22 @@ def getLatestCurFile():
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
     folderHash = re.search(".*/(.+-.+-.+-.+)/.+", sortedCur[0][0]).group(1)
 
-    gzipFiles = []
+    curFiles = []
 
     for listObjectsOutput in outputList:
         for s3Object in listObjectsOutput['Contents']:
             if 'csv.gz' in s3Object['Key'] and folderHash in s3Object['Key']:
-                gzipFiles.append(s3Object['Key'])
+                curFiles.append(s3Object['Key'])
 
     print("[FOUND] - the following CUR file(s) with timestamp \"" + sortedCur[0][1] + "\"\n")
-    for file in gzipFiles:
+    for file in curFiles:
         print("* s3://" + args.bucket + "/" + file)
     print("")
 
-    return gzipFiles
+    return curFiles
 
 
+# Manually load if not triggered by S3 event payload directly
 def manualCurImport(bucket, keys):
     if bucket is None or len(keys) < 1:
         print('Set both --bucket and --key need to location of the CUR file in S3 you want to import.')
