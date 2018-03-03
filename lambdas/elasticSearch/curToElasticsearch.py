@@ -138,61 +138,36 @@ def lambda_handler(event, context):
                 payloadKeys.append(value)
 
             # Determine index location for certain columns to be Integers or Floats
-            float = ['lineItem_UsageAmount',
-                     'lineItem_NormalizationFactor',
-                     'lineItem_NormalizedUsageAmount',
-                     'lineItem_UnblendedRate',
-                     'lineItem_UnblendedCost',
-                     'lineItem_BlendedRate',
-                     'lineItem_BlendedCost',
-                     'product_normalization',
-                     'pricing_publicOnDemandCost',
-                     'pricing_publicOnDemandRate',
-                     'reservation_NumberOfReservations',
-                     'reservation_AmortizedUpfrontCostForUsage',
-                     'reservation_AmortizedUpfrontFeeForBillingPeriod',
-                     'reservation_EffectiveCost',
-                     'reservation_NumberOfReservations',
-                     'reservation_NormalizedUnitsPerReservation',
-                     'reservation_RecurringFeeForUsage',
-                     'reservation_TotalReservedNormalizedUnits',
-                     'reservation_TotalReservedUnits',
-                     'reservation_UnitsPerReservation',
-                     'reservation_UnusedAmortizedUpfrontFeeForBillingPeriod',
-                     'reservation_UnusedNormalizedUnitQuantity',
-                     'reservation_UnusedQuantity',
-                     'reservation_UnusedRecurringFee',
-                     'reservation_UpfrontValue'
-                     ]
-            listOut = []
+            forceFloat = ['lineItem_UsageAmount',
+                          'lineItem_NormalizationFactor',
+                          'lineItem_NormalizedUsageAmount',
+                          'lineItem_UnblendedRate',
+                          'lineItem_UnblendedCost',
+                          'lineItem_BlendedRate',
+                          'lineItem_BlendedCost',
+                          'product_normalization',
+                          'pricing_publicOnDemandCost',
+                          'pricing_publicOnDemandRate',
+                          'reservation_NumberOfReservations',
+                          'reservation_AmortizedUpfrontCostForUsage',
+                          'reservation_AmortizedUpfrontFeeForBillingPeriod',
+                          'reservation_EffectiveCost',
+                          'reservation_NumberOfReservations',
+                          'reservation_NormalizedUnitsPerReservation',
+                          'reservation_RecurringFeeForUsage',
+                          'reservation_TotalReservedNormalizedUnits',
+                          'reservation_TotalReservedUnits',
+                          'reservation_UnitsPerReservation',
+                          'reservation_UnusedAmortizedUpfrontFeeForBillingPeriod',
+                          'reservation_UnusedNormalizedUnitQuantity',
+                          'reservation_UnusedQuantity',
+                          'reservation_UnusedRecurringFee',
+                          'reservation_UpfrontValue'
+                          ]
+            floatIndexNumbers = []
             for i, k in enumerate(payloadKeys):
-                if k in float:
-                    listOut.append(i)
-
-
-            forceInteger = [index for index, string in enumerate(payloadKeys) if 'engine' in string
-                            or 'Iopsvol' in string
-                            or 'vcpu' in string
-                            or 'UnitsPerReservation' in string
-                            or 'TotalReservedUnits' in string]
-            forceFloat = [index for index, string in enumerate(payloadKeys) if 'UsageAmount' in string
-                          or 'lended' in string
-                          or 'SizeFactor' in string
-                          or 'Amortized' in string
-                          or 'Unused' in string
-                          or 'EffectiveCost' in string
-                          or 'TotalReserved' in string
-                          or 'NormalizedUnitsPerReservation' in string
-                          or 'NumberOfReservations' in string
-                          or 'UnitsPerReservation' in string
-                          or 'UpfrontValue' in string
-                          or 'OnDemand' in string]
-
-            print(forceFloat)
-            print(forceInteger)
-            print(listOut)
-            sys,exit()
-
+                if k in forceFloat:
+                    floatIndexNumbers.append(i)
         else:
             # Report Body
             payloadValuesOut = []
@@ -200,12 +175,7 @@ def lambda_handler(event, context):
 
             # Convert integers and floats to numbers in the output JSON
             for index, value in enumerate(payloadValuesRaw):
-                if index in forceInteger:
-                    try:
-                        payloadValuesOut.append(int(value))
-                    except:
-                        payloadValuesOut.append(0)
-                elif index in forceFloat:
+                if index in floatIndexNumbers:
                     try:
                         payloadValuesOut.append(float(value))
                     except:
