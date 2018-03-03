@@ -137,10 +137,39 @@ def lambda_handler(event, context):
                 value = value.replace(':', '_')
                 payloadKeys.append(value)
 
-            print(payloadKeys)
-            sys.exit()
-
             # Determine index location for certain columns to be Integers or Floats
+            float = ['lineItem_UsageAmount',
+                     'lineItem_NormalizationFactor',
+                     'lineItem_NormalizedUsageAmount',
+                     'lineItem_UnblendedRate',
+                     'lineItem_UnblendedCost',
+                     'lineItem_BlendedRate',
+                     'lineItem_BlendedCost',
+                     'product_normalization',
+                     'pricing_publicOnDemandCost',
+                     'pricing_publicOnDemandRate',
+                     'reservation_NumberOfReservations',
+                     'reservation_AmortizedUpfrontCostForUsage',
+                     'reservation_AmortizedUpfrontFeeForBillingPeriod',
+                     'reservation_EffectiveCost',
+                     'reservation_NumberOfReservations',
+                     'reservation_NormalizedUnitsPerReservation',
+                     'reservation_RecurringFeeForUsage',
+                     'reservation_TotalReservedNormalizedUnits',
+                     'reservation_TotalReservedUnits',
+                     'reservation_UnitsPerReservation',
+                     'reservation_UnusedAmortizedUpfrontFeeForBillingPeriod',
+                     'reservation_UnusedNormalizedUnitQuantity',
+                     'reservation_UnusedQuantity',
+                     'reservation_UnusedRecurringFee',
+                     'reservation_UpfrontValue'
+                     ]
+            listOut = []
+            for i, k in enumerate(payloadKeys):
+                if k in float:
+                    listOut.append(i)
+
+
             forceInteger = [index for index, string in enumerate(payloadKeys) if 'engine' in string
                             or 'Iopsvol' in string
                             or 'vcpu' in string
@@ -158,6 +187,11 @@ def lambda_handler(event, context):
                           or 'UnitsPerReservation' in string
                           or 'UpfrontValue' in string
                           or 'OnDemand' in string]
+
+            print(forceFloat)
+            print(forceInteger)
+            print(listOut)
+            sys,exit()
 
         else:
             # Report Body
