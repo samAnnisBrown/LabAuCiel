@@ -115,7 +115,7 @@ def lambda_handler(event, context):
     # TODO See about hashing each line so that it has a unique _id field - this should allow the removal of this step
     if args.dryrun is False and '1.csv.gz' in key:
         print('[!!!-DELETING-!!!] - index ' + indexName + " to ensure there are no duplicates...")
-        deleteElasticsearchIndex(indexName)
+        deleteIndex(indexName, args.elasticsearch_endpoint)
 
     # Prepare variables
     linesToUpload = []
