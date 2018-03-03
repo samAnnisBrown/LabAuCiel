@@ -133,7 +133,9 @@ def lambda_handler(event, context):
             # Replace '/' with '_' for field names.  Makes life easier in Elasticsearch
             payloadKeys = []
             for value in payloadKeysIn:
-                payloadKeys.append(value.replace("/", "_"))
+                value = value.replace('/', '_')
+                value = value.replace(':', '_')
+                payloadKeys.append(value)
 
             print(payloadKeys)
             sys.exit()
