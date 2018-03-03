@@ -71,3 +71,19 @@ def lambda_handler(event, context):
     if len(actions) > 0:
         helpers.bulk(es, actions)
         print('Finished uploading.')
+
+
+lambda_handler({
+    "Records": [
+        {
+            "s3": {
+                "bucket": {
+                    "name": "ansamual-costreports"
+                },
+                "object": {
+                    "key": "QuickSight_RedShift/QuickSight_RedShift_CostReports/20180301-20180401/617eabb1-5893-458f-971f-40c718bc2e4f/QuickSight_RedShift_CostReports-1.csv.gz"
+                }
+            }
+        }
+    ]
+}, '')
