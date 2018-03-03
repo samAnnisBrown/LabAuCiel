@@ -135,6 +135,9 @@ def lambda_handler(event, context):
             for value in payloadKeysIn:
                 payloadKeys.append(value.replace("/", "_"))
 
+            print(payloadKeys)
+            sys.exit()
+
             # Determine index location for certain columns to be Integers or Floats
             forceInteger = [index for index, string in enumerate(payloadKeys) if 'engine' in string
                             or 'Iopsvol' in string
@@ -284,6 +287,7 @@ def deleteIndex(indexName, esEndpoint):
     response = requests.delete('http://' + esEndpoint + '/' + indexName + '?pretty')
     print(response.text)
     sys.exit()
+
 
 def getLatestCurFile():
     # Create dit/list

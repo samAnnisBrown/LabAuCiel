@@ -4,17 +4,22 @@ import json
 import urllib.request
 from time import sleep
 
-es = 'https://elasticsearch-nlb-ec6325e5a5d3e3a8.elb.us-east-1.amazonaws.com'
+#es = 'https://vpc-sydney-summit-2018-ukfuj6urblh2nzu3revuq43dze.us-east-1.es.amazonaws.com'
+es = 'https://es.annisbrown.com'
 
 
-def lambdaFunction(event, context):
+def lambda_handler(event, context):
+    sleep(0)                    # For ENI attach
     try:
-        sleep(1)                    # For ENI attach
         rt = getJsonRoot(event)     # Get root level of Json only
         getJsonLevels(event, rt)    # Get Json lower levels and merge with root
+        # Send Full event to ES
+        event['ElasticSearchUpload'] = 'Success'
+        ToEs(event)
+        return event    # For Step Function Pass-thru
     except:
-        pass
-    return event
+        failed = event['ElasticSearchUpload'] = 'Failed'
+        return failed   # For Step Function Pass-thru
 
 
 def getJsonRoot(jsn):
@@ -53,9 +58,44 @@ def ToEs(doc):
     f.close()
     print(rsp)
 
+import json
+import urllib.request
+
+
+def getLatestPhdEvent():
+    # Variables
+    #es = 'https://vpc-sydney-summit-2018-ukfuj6urblh2nzu3revuq43dze.us-east-1.es.amazonaws.com"        # Works from Lambda in us-east-1 default VPC
+    es = 'https://es.annisbrown.com'                                                                    # Works from ANT (IP Whitelisted)
+    index = 'phd-events'
+    query = {
+        "query": {
+            "query_string": {
+                "default_field": "ElasticSearchUpload",
+                "query": "Success"
+            }
+        },
+        "size": 1,
+        "sort": [
+            {
+                "PhdEventTime": {
+                    "order": "desc"
+                }
+            }
+        ]
+    }
+    # Elasticsearch Request/Response
+    payload = json.dumps(query).encode('utf-8')         # Encode query for HTTP request
+    request = urllib.request.Request(es + '/' + index + '/_search', payload, {'Content-Type': 'application/json'}, method='GET')    # Build HTTP request
+    response = urllib.request.urlopen(request).read()   # Send Request
+    response = json.loads(response.decode('utf-8'))     # Decode response and convert to JSON
+
+    return response['hits']['hits'][0]['_source']       # Return query payload
+
+print(getLatestPhdEvent())
+sys.exit()
 
 def listIndex():
-    response = requests.get('http://' + es[8:] + '/_cat/indices?v&pretty')
+    response = requests.get(es + '/_cat/indices?v&pretty')
     print(response.text)
     print('Finished listing - Existing...')
     sys.exit()
@@ -63,14 +103,15 @@ def listIndex():
 
 
 def deleteIndex():
-    itd = ['phd-events']
+    itd = ['phd-*']
     for x in itd:
-        response = requests.delete('http://' + es[8:] + '/' + x + '?pretty')
+        response = requests.delete(es + '/' + x + '?pretty')
         print(response.text)
     sys.exit()
 #deleteIndex()
 
-lambdaFunction({
+
+lambda_handler({
     "AvailabilityZone": "us-east-1d",
     "CreateTime": "26 Feb 2018 12:23:49",
     "Encrypted": "false",
@@ -87,7 +128,7 @@ lambdaFunction({
         "VolumeId": "vol-0fa020a7106de56b1",
         "DeleteOnTermination": "false"
     },
-    "PhdEventTime": "07 Feb 2017 00:55:52",
+    "PhdEventTime": "2018-02-26T13:07:36.026000+00:00",
     "PhdEventId": "b141e3d0-b1ce-37c6-2b63-2ac4a53a39db",
     "ResourceStack": {
         "StackName": "DemoApp01",
