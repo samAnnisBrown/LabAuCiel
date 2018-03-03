@@ -78,12 +78,13 @@ lambda_handler({
         {
             "s3": {
                 "bucket": {
-                    "name": "ansamual-costreports"
+                    "name": "ansamual-elblogs"
                 },
                 "object": {
-                    "key": "QuickSight_RedShift/QuickSight_RedShift_CostReports/20180301-20180401/617eabb1-5893-458f-971f-40c718bc2e4f/QuickSight_RedShift_CostReports-1.csv.gz"
+                    "key": "AWSLogs/618252783261/elasticloadbalancing/ap-southeast-2/2018/03/03/618252783261_elasticloadbalancing_ap-southeast-2_app.es-alb.8ed53396a9cf8e7c_20180303T0125Z_52.64.124.41_733847om.log.gz"
                 }
             }
         }
     ]
-}, '')
+    }, '')
+
