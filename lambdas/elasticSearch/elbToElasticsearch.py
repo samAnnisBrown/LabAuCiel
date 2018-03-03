@@ -1,6 +1,8 @@
 import boto3
 import re
 import os
+from gzip import GzipFile       # So we can gunzip stuff
+from io import BytesIO          # Stream bytes from S3
 from elasticsearch import helpers
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from aws_requests_auth.aws_auth import AWSRequestsAuth
@@ -8,11 +10,6 @@ from time import sleep
 
 # Elasticsearch host name
 esHost = "vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com"
-
-albKeys = ["type", "timestamp", "elb", "client_ip", "client_port", "backend_ip", "backend_port", "request_processing_time", "backend_processing_time", "response_processing_time", "elb_status_code", "backend_status_code", "received_bytes", "sent_bytes", "request_method", "request_url", "request_version", "user_agent"]
-albRegex = '^(.[^ ]+) (.[^ ]+) (.[^ ]+) (.[^ ]+):(\\d+) (.[^ ]+):(\\d+) (.[^ ]+) (.[^ ]+) (.[^ ]+) (.[^ ]+) (.[^ ]+) (\\d+) (\\d+) \"(\\w+) (.[^ ]+) (.[^ ]+)\" \"(.+)\"'
-
-regex = re.compile(albRegex)
 indexName = 'elb-accesslogs'
 esBulkUrl = "https://" + esHost + "/_bulk"
 
@@ -25,13 +22,64 @@ def lambda_handler(event, context):
 
     # Retrieve S3 Object
     s3 = boto3.client("s3")
-    obj = s3.get_object(
+    s3file = s3.get_object(
         Bucket=bucket,
         Key=key
     )
 
-    # Read S3 Object
-    body = obj["Body"].read()
+    if '.log.gz' in key:    # ALB or NLB
+        print('ALB Log File')
+        bytestream = BytesIO(s3file['Body'].read())
+        body = GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
+        columns = ["type",
+                   "timestamp",
+                   "elb",
+                   "client_ip",
+                   "client_port",
+                   "backend_ip",
+                   "backend_port",
+                   "request_processing_time",
+                   "backend_processing_time",
+                   "response_processing_time",
+                   "elb_status_code",
+                   "backend_status_code",
+                   "received_bytes",
+                   "sent_bytes",
+                   "request_method",
+                   "request_url",
+                   "request_version",
+                   "user_agent",
+                   "ssl_cipher",
+                   "ssl_version",
+                   "additional_info"
+                   ]
+        albRegex = '^(.[^ ]+) (.[^ ]+) (.[^ ]+) (.[^ ]+):(\d+) (.[^ ]+):(\d+) (.[^ ]+) (.[^ ]+) (.[^ ]+) (.[^ ]+) (.[^ ]+) (\d+) (\d+) "(\w+) (.[^ ]+) (.[^ ]+)" "(.+?)"(.[^ ]+) (.[^ ]+) (.+)\n'
+        regex = re.compile(albRegex)
+    else:
+        print('CLB Log File')
+        body = s3file['Body'].read()
+        columns = ["timestamp",
+                   "elb",
+                   "client_ip",
+                   "client_port",
+                   "backend_ip",
+                   "backend_port",
+                   "request_processing_time",
+                   "backend_processing_time",
+                   "response_processing_time",
+                   "elb_status_code",
+                   "backend_status_code",
+                   "received_bytes",
+                   "sent_bytes",
+                   "request_method",
+                   "request_url",
+                   "request_version",
+                   "user_agent",
+                   "ssl_cipher",
+                   "ssl_version"
+                   ]
+        clbRegex = '^(.[^ ]+) (.[^ ]+) (.[^ ]+):(\d+) (.[^ ]+):(\d+) (.[^ ]+) (.[^ ]+) (.[^ ]+) (.[^ ]+) (.[^ ]+) (\d+) (\d+) "(\w+) (.[^ ]+) (.[^ ]+)" "(.+?)"(.[^ ]+) (.[^ ]+)\n'
+        regex = re.compile(clbRegex)
 
     # Retrieve Access details (Lambda IAM role must have access to ES domain to work)
     awsauth = AWSRequestsAuth(aws_access_key=os.environ['AWS_ACCESS_KEY_ID'],
@@ -58,7 +106,7 @@ def lambda_handler(event, context):
         valuesList = regexMatch.groups(0)
 
         # Merge column title list 'albkeys' and 'valuesList' list into dictionary
-        payload = dict(zip(albKeys, valuesList))
+        payload = dict(zip(columns, valuesList))
         actions.append({"_index": indexName, "_type": 'doc', "_source": payload})
 
         # If greater than 1000 actions, commit bulk upload
