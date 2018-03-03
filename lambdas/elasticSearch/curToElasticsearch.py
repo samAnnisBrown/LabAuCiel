@@ -115,7 +115,7 @@ def lambda_handler(event, context):
     # TODO See about hashing each line so that it has a unique _id field - this should allow the removal of this step
     if args.dryrun is False and '1.csv.gz' in key:
         print('[!!!-DELETING-!!!] - index ' + indexName + " to ensure there are no duplicates...")
-        deleteIndex(indexName, args.elasticsearch_endpoint)
+        deleteElasticsearchIndex(indexName)
 
     # Prepare variables
     linesToUpload = []
@@ -224,6 +224,12 @@ def uploadToElasticsearch(actions, indexName):
         print("[DRYRUN] - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
 
 
+# Delete the specified ES index
+def deleteElasticsearchIndex(indexName):
+    es = returnElasticsearchAuth()
+    es.indices.delete(index=indexName, ignore=[400, 404])
+
+
 # Return ES auth, depending on whether it's in a Lambda function or not
 def returnElasticsearchAuth():
     if not args.cur_load:
@@ -270,7 +276,7 @@ def returnS3Auth():
     return s3
 
 
-# List ES indices
+# List Indices
 def listIndex(esEndpoint):
     response = requests.get('https://' + esEndpoint + '/_cat/indices?v&pretty')
     print(response.text)
@@ -278,7 +284,7 @@ def listIndex(esEndpoint):
     sys.exit()
 
 
-# Delete ES index
+# Delete named index
 def deleteIndex(indexName, esEndpoint):
     print('[--DELETING--] - Index ' + indexName)
     response = requests.delete('https://' + esEndpoint + '/' + indexName + '?pretty')
@@ -286,7 +292,7 @@ def deleteIndex(indexName, esEndpoint):
     sys.exit()
 
 
-# Grab list of CUR files for upload
+# Get the latest CUR files for upload
 def getLatestCurFile():
     # Create dit/list
     curFiles = {}
@@ -328,22 +334,21 @@ def getLatestCurFile():
     sortedCur = sorted(curFiles.items(), key=operator.itemgetter(1), reverse=True)
     folderHash = re.search(".*/(.+-.+-.+-.+)/.+", sortedCur[0][0]).group(1)
 
-    curFiles = []
+    curFilesForUpload = []
 
     for listObjectsOutput in outputList:
         for s3Object in listObjectsOutput['Contents']:
             if 'csv.gz' in s3Object['Key'] and folderHash in s3Object['Key']:
-                curFiles.append(s3Object['Key'])
+                curFilesForUpload.append(s3Object['Key'])
 
     print("[FOUND] - the following CUR file(s) with timestamp \"" + sortedCur[0][1] + "\"\n")
-    for file in curFiles:
+    for file in curFilesForUpload:
         print("* s3://" + args.bucket + "/" + file)
     print("")
 
-    return curFiles
+    return curFilesForUpload
 
 
-# Manually load if not triggered by S3 event payload directly
 def manualCurImport(bucket, keys):
     if bucket is None or len(keys) < 1:
         print('Set both --bucket and --key need to location of the CUR file in S3 you want to import.')
