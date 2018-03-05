@@ -9,57 +9,35 @@ es = 'https://es.annisbrown.com'
 
 
 def lambda_handler(event, context):
-    sleep(0)                    # For ENI attach
-    try:
-        rt = getJsonRoot(event)     # Get root level of Json only
-        getJsonLevels(event, rt)    # Get Json lower levels and merge with root
-        # Send Full event to ES
-        event['ElasticSearchUpload'] = 'Success'
-        ToEs(event)
-        return event    # For Step Function Pass-thru
-    except:
-        failed = event['ElasticSearchUpload'] = 'Failed'
-        return failed   # For Step Function Pass-thru
+    pTime = event['PhdEventTime']
+    pId = event['PhdEventId']
+    iterateJson(event, pTime, pId)
 
 
-def getJsonRoot(jsn):
-    out = {}
+def iterateJson(jsn, time, id):
+    pld = {}
     for i in jsn.items():
         if type(i[1]) is str:
-            out[i[0]] = i[1]
-    return out
+            pld[i[0]] = i[1]
+        elif type(i[1]) is dict:
+            iterateJson(jsn[i[0]], time, id)
+        elif type(i[1]) is list:
+            for k in jsn[i[0]]:
+                iterateJson(k, time, id)
 
-
-def getJsonLevels(jsn, rt):
-    for x in jsn.items():
-        k = jsn[x[0]]
-        vt = type(x[1])
-        if vt is dict:
-            getJsonLevels(k, rt)
-            ToEs(mergeJson(rt, k))
-        elif vt is list:
-            for z in k[:]:
-                getJsonLevels(z, rt)
-                ToEs(mergeJson(rt, z))
-
-
-def mergeJson(a, b):
-    for item in a.items():
-        b[item[0]] = item[1]
-    return b
+    pld['PhdEventTime'] = time
+    pld['PhdEventId'] = id
+    print(pld)
 
 
 def ToEs(doc):
     i = 'phd-events'
-    jv = json.dumps(doc).encode('utf8')
-    rq = urllib.request.Request(es + '/' + i + '/doc', jv, {'Content-Type': 'application/json'}, method='POST')
+    payload = json.dumps(doc).encode('utf8')
+    rq = urllib.request.Request(es + '/' + i + '/doc', payload, {'Content-Type': 'application/json'}, method='POST')
     f = urllib.request.urlopen(rq)
     rsp = f.read()
     f.close()
     print(rsp)
-
-import json
-import urllib.request
 
 
 def getLatestPhdEvent():
@@ -91,8 +69,6 @@ def getLatestPhdEvent():
 
     return response['hits']['hits'][0]['_source']       # Return query payload
 
-print(getLatestPhdEvent())
-sys.exit()
 
 def listIndex():
     response = requests.get(es + '/_cat/indices?v&pretty')
