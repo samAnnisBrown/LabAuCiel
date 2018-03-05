@@ -5,3 +5,4 @@ boto3
 gunicorn
 pyyaml
 aws_requests_auth
+elasticsearch
