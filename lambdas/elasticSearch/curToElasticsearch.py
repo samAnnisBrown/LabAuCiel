@@ -18,7 +18,7 @@ from time import sleep
 # Argument Creation
 parser = argparse.ArgumentParser(description="This scrupts uploads CUR data to and manipulate Elasticsearch indices")
 parser.add_argument('--elasticsearch_endpoint',
-                    default='vpc-aws-cost-analysis-hmr7dskev6kmznsmqzhmv7r3te.ap-southeast-2.es.amazonaws.com',
+                    default='vpc-wildwest-gw7tbux4h6vom3xqucxpqqusre.ap-southeast-2.es.amazonaws.com',
                     help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
 # Working with Indexes
 parser.add_argument('-l', '--index_list', action='store_true',

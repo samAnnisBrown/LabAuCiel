@@ -9,9 +9,20 @@ es = 'https://es.annisbrown.com'
 
 
 def lambda_handler(event, context):
-    pTime = event['PhdEventTime']
-    pId = event['PhdEventId']
+    sleep(1)
+    try:
+        pTime = event['PhdEventTime']
+        pId = event['PhdEventId']
+    except:
+        pTime = 'ERROR_PARSING_JSON'
+        pId = 'ERROR_PARSING_JSON'
+
     iterateJson(event, pTime, pId)
+    try:
+        ToEs(event, 'phd-full-events')
+    except:
+        event['ESUpload'] = 'Failed'
+    return event
 
 
 def iterateJson(jsn, time, id):
@@ -27,16 +38,19 @@ def iterateJson(jsn, time, id):
 
     pld['PhdEventTime'] = time
     pld['PhdEventId'] = id
-    print(pld)
+    pld['ESUpload'] = 'Success'
+    ToEs(pld, 'phd-events')
 
 
-def ToEs(doc):
-    i = 'phd-events'
+def ToEs(doc, index):
     payload = json.dumps(doc).encode('utf8')
-    rq = urllib.request.Request(es + '/' + i + '/doc', payload, {'Content-Type': 'application/json'}, method='POST')
-    f = urllib.request.urlopen(rq)
-    rsp = f.read()
-    f.close()
+    rq = urllib.request.Request(es + '/' + index + '/doc', payload, {'Content-Type': 'application/json'}, method='POST')
+    try:
+        f = urllib.request.urlopen(rq)
+        rsp = f.read()
+        f.close()
+    except urllib.error.HTTPError:
+        rsp = 'Error uploading ' + str(doc)
     print(rsp)
 
 
@@ -48,7 +62,7 @@ def getLatestPhdEvent():
     query = {
         "query": {
             "query_string": {
-                "default_field": "ElasticSearchUpload",
+                "default_field": "ES",
                 "query": "Success"
             }
         },
