@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: '2010-09-09'
+# Execution Role for Lambda Functions
+ExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+                - "lambda.amazonaws.com"
+                - Fn::Join:
+                    - ""
+                    - - "states."
+                      - !Ref "AWS::Region"
+                      - ".amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "Policies"
+          PolicyDocument:
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "arn:aws:logs:*:*:*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "ec2:AttachVolume"
+                  - "ec2:CreateVolume"
+                  - "ec2:DescribeSnapshots"
+                  - "ec2:DescribeVolumes"
+                  - "ec2:DetachVolume"
+                  - "ec2:DescribeInstances"
+                  - "ec2:StartInstances"
+                  - "ec2:StopInstances"
+                Resource: "*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource:
+                  Fn::Join:
+                    - ""
+                    - - "arn:aws:lambda:"
+                      - !Ref "AWS::Region"
+                      - ":"
+                      - !Ref "AWS::AccountId"
+                      - ":*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "states:StartExecution"
+                Resource:
+                  Fn::Join:
+                    - ""
+                    - - "arn:aws:states:"
+                      - !Ref "AWS::Region"
+                      - ":"
+                      - !Ref "AWS::AccountId"
+                      - ":*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "sns:Publish"
+                Resource:
+                  Fn::Join:
+                    - ""
+                    - - "arn:aws:sns:"
+                      - !Ref "AWS::Region"
+                      - ":"
+                      - !Ref "AWS::AccountId"
+                      - ":*"
+
+# Lambda Functions
+# ----------------
+
+# Upload to Elasticsearch
+LambdaElasticsearchLoad:
+  Type: "AWS::Lambda::Function"
+  Properties:
+    FunctionName: "aht-ebs-elasticsearch-load"
+    Handler: "lambda_function.lambda_handler"
+    Role: !GetAtt ExectionRole.Arn
+    Runtime: "python3.6"
+    Timeout: 25
+    Code: |
+      import json
+      import urllib.request
+      from time import sleep
+
+      es = 'https://vpc-sydney-summit-2018-ukfuj6urblh2nzu3revuq43dze.us-east-1.es.amazonaws.com'
+
+
+      def lambda_handler(event, context):
+          sleep(1)
+          try:
+              pTime = event['PhdEventTime']
+              pId = event['PhdEventId']
+          except:
+              pTime = 'ERROR_PARSING_JSON'
+              pId = 'ERROR_PARSING_JSON'
+
+          iterateJson(event, pTime, pId)
+          try:
+              ToEs(event, 'phd-full-events')
+          except:
+              event['ESUpload'] = 'Failed'
+          return event
+
+
+      def iterateJson(jsn, time, id):
+          pld = {}
+          for i in jsn.items():
+              if type(i[1]) is str:
+                  pld[i[0]] = i[1]
+              elif type(i[1]) is dict:
+                  iterateJson(jsn[i[0]], time, id)
+              elif type(i[1]) is list:
+                  for k in jsn[i[0]]:
+                      iterateJson(k, time, id)
+
+          pld['PhdEventTime'] = time
+          pld['PhdEventId'] = id
+          pld['ESUpload'] = 'Success'
+          ToEs(pld, 'phd-events')
+
+
+      def ToEs(doc, index):
+          payload = json.dumps(doc).encode('utf8')
+          rq = urllib.request.Request(es + '/' + index + '/doc', payload, {'Content-Type': 'application/json'}, method='POST')
+          try:
+              f = urllib.request.urlopen(rq)
+              rsp = f.read()
+              f.close()
+          except urllib.error.HTTPError:
+              rsp = 'Error uploading ' + str(doc)
+          print(rsp)
+
