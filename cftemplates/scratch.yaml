@@ -1,0 +1,22 @@
+  ElasticsearchNLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: network
+      Subnets:
+        - !Ref Subnet
+
+  ElasticsearchTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckProtocol: HTTPS
+      HealthCheckIntervalSeconds: 5
+      HealthCheckTimeoutSeconds: 2
+      HealthyThresholdCount: 2
+      Port: 443
+      Protocol: HTTPS
+      Targets:
+        -
+          Id: 172.16.3.47
+          Port: 443
+      TargetType: ip
+      VpcId: !Ref VPC
