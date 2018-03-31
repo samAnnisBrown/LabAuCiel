@@ -51,6 +51,15 @@ Resources:
         EBSEnabled: true
         VolumeType: gp2
         VolumeSize: 10
+      AccessPolicies:
+        Version: 2012-10-17
+        Statement:
+           -
+            Effect": Allow
+            Principal:
+              AWS: '*'
+            Action: 'es:*'
+            Resource: '*'
 
   ElasticsearchSecurityGroup:
       Type: "AWS::EC2::SecurityGroup"
@@ -63,7 +72,11 @@ Resources:
             IpProtocol: TCP
             FromPort: 80
             ToPort: 80
-
+          -
+            CidrIp: !GetAtt CustomVpcCidr.Cidr
+            IpProtocol: TCP
+            FromPort: 80
+            ToPort: 80
   ElasticsearchELB:
     Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
     Properties:
@@ -82,7 +95,7 @@ Resources:
       HealthCheckIntervalSeconds: 5
       Targets:
         -
-          Id: !GetAtt CustomElasticsearchIP.Ip
+          Id: !GetAtt CustomElasticsearchIp.Ip
           Port: 80
       TargetType: ip
       VpcId: !Ref VPC
@@ -97,15 +110,15 @@ Resources:
           TargetGroupArn: !Ref ElasticsearchELBTargetGroup
       LoadBalancerArn: !Ref ElasticsearchELB
 
-  CustomElasticsearchIP:
+  # Custom Resources
+  # Get Elasticsearch IP for Target Group
+  CustomElasticsearchIp:
     Type: Custom::ElasticsearchIP
     Version: 1.0
     Properties:
-      ServiceToken: !GetAtt LambdaGetElasticsearchIP.Arn
+      ServiceToken: !GetAtt LambdaElasticsearchIp.Arn
       EsEndpoint: !GetAtt ElasticsearchDomain.DomainEndpoint
-
-  # Lambda Functions
-  LambdaGetElasticsearchIP:
+  LambdaElasticsearchIp:
         Type: "AWS::Lambda::Function"
         Properties:
           Handler: index.lambda_handler
@@ -124,17 +137,45 @@ Resources:
 
               def lambda_handler(event, context):
                   try:
-                      print(event)
                       sleep(1)
                       esEndpoint = event['ResourceProperties']['EsEndpoint']
                       esIp = socket.gethostbyname(esEndpoint)
                       responseData = {'Ip': esIp}
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                  except Exception as e:
+                      cfnresponse.send(event, context, cfnresponse.FAILED)
+
+  # Get VPC Cidr for Elasticsearch Security Group
+  CustomVpcCidr:
+    Type: Custom::VpcCidr
+    Version: 1.0
+    Properties:
+      ServiceToken: !GetAtt LambdaVpcCidr.Arn
+      VpcId: !Ref VPC
+  LambdaVpcCidr:
+        Type: "AWS::Lambda::Function"
+        Properties:
+          Handler: index.lambda_handler
+          Role: !GetAtt ExecutionRole.Arn
+          Runtime: python3.6
+          Timeout: 25
+          Code:
+            ZipFile: |
+              import boto3
+              import cfnresponse
+
+              def lambda_handler(event, context):
+                  try:
+                      ec2 = boto3.resource('ec2')
+                      vpc = ec2.Vpc(event['ResourceProperties']['VpcId'])
+                      cidr = vpc.cidr_block
+                      responseData = {'Cidr': cidr}
                       print(responseData)
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
                   except Exception as e:
-                      responseData = {'error': e}
-                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
+                      cfnresponse.send(event, context, cfnresponse.FAILED)
 
+  # Core EBS Volume Lost Lambda Functions
   LambdaFindVolume:
       Type: "AWS::Lambda::Function"
       Properties:
