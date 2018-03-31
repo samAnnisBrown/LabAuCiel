@@ -8,8 +8,8 @@ Parameters:
   VPC:
     Type: "AWS::EC2::VPC::Id"
     Description: Enter the VPC used for the Elasticsearch security group.
-  Subnet:
-    Type: "AWS::EC2::Subnet::Id"
+  Subnets:
+    Type: "List<AWS::EC2::Subnet::Id>"
     Description: The subnet used by the Elasticsearch domain and Lambda load function.
   PublicCidr:
     Type: String
@@ -41,7 +41,7 @@ Resources:
       ElasticsearchVersion: 6.2
       VPCOptions:
         SubnetIds:
-          - !Ref Subnet
+          - !Select [ 0, !Ref Subnets ]
         SecurityGroupIds:
           - !Ref ElasticsearchSecurityGroup
       ElasticsearchClusterConfig:
@@ -58,45 +58,83 @@ Resources:
         GroupDescription: Allows internal data loading and public access to Elasticsearch.
         VpcId: !Ref VPC
         SecurityGroupIngress:
-          CidrIp: !Ref PublicCidr
-          IpProtocol: TCP
-          FromPort: 443
-          ToPort: 443
+          -
+            CidrIp: !Ref PublicCidr
+            IpProtocol: TCP
+            FromPort: 80
+            ToPort: 80
 
-  ElasticsearchNLB:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+  ElasticsearchELB:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
     Properties:
-      Type: network
-      Subnets:
-        - !Ref Subnet
+      Type: application
+      Subnets: !Ref Subnets
+      SecurityGroups:
+        - !Ref ElasticsearchSecurityGroup
 
-  ElasticsearchTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  ElasticsearchELBTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
     Properties:
-      HealthCheckProtocol: HTTPS
-      HealthCheckIntervalSeconds: 5
-      HealthCheckTimeoutSeconds: 2
+      Port: 80
+      Protocol: HTTP
       HealthyThresholdCount: 2
-      Port: 443
-      Protocol: TCP
+      HealthCheckTimeoutSeconds: 2
+      HealthCheckIntervalSeconds: 5
       Targets:
         -
-          Id: 172.16.3.47
-          Port: 443
+          Id: !GetAtt CustomElasticsearchIP.Ip
+          Port: 80
       TargetType: ip
       VpcId: !Ref VPC
 
-  ElasticsearchNLBListener:
+  ElasticsearchELBListener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
     Properties:
+      Port: 80
+      Protocol: HTTP
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !Ref ElasticsearchTargetGroup
-      LoadBalancerArn: !Ref ElasticsearchNLB
-      Port: 443
-      Protocol: TCP
+          TargetGroupArn: !Ref ElasticsearchELBTargetGroup
+      LoadBalancerArn: !Ref ElasticsearchELB
+
+  CustomElasticsearchIP:
+    Type: Custom::ElasticsearchIP
+    Version: 1.0
+    Properties:
+      ServiceToken: !GetAtt LambdaGetElasticsearchIP.Arn
+      EsEndpoint: !GetAtt ElasticsearchDomain.DomainEndpoint
 
   # Lambda Functions
+  LambdaGetElasticsearchIP:
+        Type: "AWS::Lambda::Function"
+        Properties:
+          Handler: index.lambda_handler
+          Role: !GetAtt ExecutionRole.Arn
+          Runtime: python3.6
+          Timeout: 25
+          VpcConfig:
+            SubnetIds: !Ref Subnets
+            SecurityGroupIds:
+              - !Ref ElasticsearchSecurityGroup
+          Code:
+            ZipFile: |
+              import socket
+              import cfnresponse
+              from time import sleep
+
+              def lambda_handler(event, context):
+                  try:
+                      print(event)
+                      sleep(1)
+                      esEndpoint = event['ResourceProperties']['EsEndpoint']
+                      esIp = socket.gethostbyname(esEndpoint)
+                      responseData = {'Ip': esIp}
+                      print(responseData)
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                  except Exception as e:
+                      responseData = {'error': e}
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
+
   LambdaFindVolume:
       Type: "AWS::Lambda::Function"
       Properties:
@@ -406,8 +444,7 @@ Resources:
       Runtime: python3.6
       Timeout: 25
       VpcConfig:
-        SubnetIds:
-          - !Ref Subnet
+        SubnetIds: !Ref Subnets
         SecurityGroupIds:
           - !Ref ElasticsearchSecurityGroup
       Environment:
@@ -416,6 +453,7 @@ Resources:
       Code:
         ZipFile: |
           import json
+          import os
           import urllib.request
           from time import sleep
 
