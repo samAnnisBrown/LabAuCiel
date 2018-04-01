@@ -5,14 +5,15 @@ Parameters:
     Type: String
     Default: "https://hooks.chime.aws/incomingwebhooks/a9c36f92-fcd0-4f06-9b86-cd8b267f676a?token=am5YUWZsbGZ8MXx3d2owTE9XT1ZES2s4M3lKbUNMUTBHZnl1UmNJWjQ2NEkxM1gweHFEX3pF"
     Description: Enter the webhook for Chime notifications.
-  VPC:
+  VpcId:
     Type: "AWS::EC2::VPC::Id"
-    Description: Enter the VPC used for the Elasticsearch security group.
-  Subnets:
+    Description: Enter the VPC that the subnets belong to.
+  SubnetIds:
     Type: "List<AWS::EC2::Subnet::Id>"
-    Description: The subnet used by the Elasticsearch domain and Lambda load function.
+    Description: You must select AT LEAST two (2) PUBLIC subnets for demo instance, ELB, Elasticsearch domain, and Lambda load functions to work.
   PublicCidr:
-    Type: String
+    Type: "String"
+    Description: The public IP address that Kibana and the demo SSH instance will be accessible from.
 
 Resources:
   # IAM Execution Role for Lambda Functions
@@ -41,7 +42,7 @@ Resources:
       ElasticsearchVersion: 6.2
       VPCOptions:
         SubnetIds:
-          - !Select [ 0, !Ref Subnets ]
+          - !Select [ 0, !Ref SubnetIds ]
         SecurityGroupIds:
           - !Ref ElasticsearchSecurityGroup
       ElasticsearchClusterConfig:
@@ -54,18 +55,18 @@ Resources:
       AccessPolicies:
         Version: 2012-10-17
         Statement:
-           -
-            Effect": Allow
+          - Effect: Allow
             Principal:
               AWS: '*'
             Action: 'es:*'
             Resource: '*'
 
+
   ElasticsearchSecurityGroup:
       Type: "AWS::EC2::SecurityGroup"
       Properties:
         GroupDescription: Allows internal data loading and public access to Elasticsearch.
-        VpcId: !Ref VPC
+        VpcId: !Ref VpcId
         SecurityGroupIngress:
           -
             CidrIp: !Ref PublicCidr
@@ -77,11 +78,12 @@ Resources:
             IpProtocol: TCP
             FromPort: 80
             ToPort: 80
+
   ElasticsearchELB:
     Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
     Properties:
       Type: application
-      Subnets: !Ref Subnets
+      Subnets: !Ref SubnetIds
       SecurityGroups:
         - !Ref ElasticsearchSecurityGroup
 
@@ -98,7 +100,7 @@ Resources:
           Id: !GetAtt CustomElasticsearchIp.Ip
           Port: 80
       TargetType: ip
-      VpcId: !Ref VPC
+      VpcId: !Ref VpcId
 
   ElasticsearchELBListener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
@@ -126,7 +128,7 @@ Resources:
           Runtime: python3.6
           Timeout: 25
           VpcConfig:
-            SubnetIds: !Ref Subnets
+            SubnetIds: !Ref SubnetIds
             SecurityGroupIds:
               - !Ref ElasticsearchSecurityGroup
           Code:
@@ -143,7 +145,8 @@ Resources:
                       responseData = {'Ip': esIp}
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
                   except Exception as e:
-                      cfnresponse.send(event, context, cfnresponse.FAILED)
+                      responseData = {'Error': str(e)}
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
 
   # Get VPC Cidr for Elasticsearch Security Group
   CustomVpcCidr:
@@ -151,7 +154,7 @@ Resources:
     Version: 1.0
     Properties:
       ServiceToken: !GetAtt LambdaVpcCidr.Arn
-      VpcId: !Ref VPC
+      VpcId: !Ref VpcId
   LambdaVpcCidr:
         Type: "AWS::Lambda::Function"
         Properties:
@@ -173,7 +176,8 @@ Resources:
                       print(responseData)
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
                   except Exception as e:
-                      cfnresponse.send(event, context, cfnresponse.FAILED)
+                      responseData = {'Error': str(e)}
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
 
   # Core EBS Volume Lost Lambda Functions
   LambdaFindVolume:
@@ -451,7 +455,7 @@ Resources:
   LambdaUpdateStack:
     Type: "AWS::Lambda::Function"
     Properties:
-      Handler: index.lambda_handle
+      Handler: index.lambda_handler
       Role: !GetAtt ExecutionRole.Arn
       Runtime: python3.6
       Timeout: 25
@@ -472,7 +476,10 @@ Resources:
                       { 'ParameterKey': 'KeyName', 'UsePreviousValue': True },
                       { 'ParameterKey': 'VpcId', 'UsePreviousValue': True }
                   ],
-                  UsePreviousTemplate=True
+                  UsePreviousTemplate=True,
+                  Capabilities=[
+                          'CAPABILITY_IAM',
+                      ],
                   )
 
               return event
@@ -483,9 +490,9 @@ Resources:
       Handler: index.lambda_handler
       Role: !GetAtt ExecutionRole.Arn
       Runtime: python3.6
-      Timeout: 25
+      Timeout: 120
       VpcConfig:
-        SubnetIds: !Ref Subnets
+        SubnetIds: !Ref SubnetIds
         SecurityGroupIds:
           - !Ref ElasticsearchSecurityGroup
       Environment:
@@ -498,7 +505,7 @@ Resources:
           import urllib.request
           from time import sleep
 
-          es = str("https://" + os.environ['ESDOMAIN'])
+          es = str("http://" + os.environ['ESDOMAIN'])
 
 
           def lambda_handler(event, context):
@@ -734,3 +741,16 @@ Resources:
                 }
               }
             - { LambdaChimeNotification: !GetAtt LambdaChimeNotification.Arn, LambdaElasticsearchLoad: !GetAtt LambdaElasticsearchLoad.Arn, LambdaGatherEvents: !GetAtt LambdaGatherEvents.Arn, LambdaCheckStack: !GetAtt LambdaCheckStack.Arn, LambdaUpdateStack: !GetAtt LambdaUpdateStack.Arn, LambdaFindAmi: !GetAtt LambdaFindAmi.Arn, LambdaCheckSnapshot: !GetAtt LambdaCheckSnapshot.Arn, LambdaFindInstanceId: !GetAtt LambdaFindInstanceId.Arn, LambdaFindVolume: !GetAtt LambdaFindVolume.Arn }
+
+Outputs:
+  KibanaURL:
+    Description: Access URL for Kibana.
+    Value:
+      !Join
+        - ''
+        - - 'http://'
+          - !GetAtt ElasticsearchELB.DNSName
+          - '/_plugin/kibana'
+  KibanaWhitelist:
+    Description: Public IPs Kibana is accessible from.
+    Value: !Ref PublicCidr
