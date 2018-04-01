@@ -13,7 +13,7 @@ Parameters:
     Description: You must select AT LEAST two (2) PUBLIC subnets for demo instance, ELB, Elasticsearch domain, and Lambda load functions to work.
   PublicCidr:
     Type: "String"
-    Description: The public IP address that Kibana and the demo SSH instance will be accessible from.
+    Description: The public IP address that Kibana will be accessible from.
 
 Resources:
   # IAM Execution Role for Lambda Functions
@@ -139,11 +139,15 @@ Resources:
 
               def lambda_handler(event, context):
                   try:
-                      sleep(1)
-                      esEndpoint = event['ResourceProperties']['EsEndpoint']
-                      esIp = socket.gethostbyname(esEndpoint)
-                      responseData = {'Ip': esIp}
-                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                      if event['RequestType'] == 'Delete':
+                        responseData = {'Delete': 'SUCCESS'}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                      else:
+                        sleep(1)
+                        esEndpoint = event['ResourceProperties']['EsEndpoint']
+                        esIp = socket.gethostbyname(esEndpoint)
+                        responseData = {'Ip': esIp}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
                   except Exception as e:
                       responseData = {'Error': str(e)}
                       cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
@@ -169,12 +173,16 @@ Resources:
 
               def lambda_handler(event, context):
                   try:
-                      ec2 = boto3.resource('ec2')
-                      vpc = ec2.Vpc(event['ResourceProperties']['VpcId'])
-                      cidr = vpc.cidr_block
-                      responseData = {'Cidr': cidr}
-                      print(responseData)
-                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                      if event['RequestType'] == 'Delete':
+                        responseData = {'Delete': 'SUCCESS'}
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                      else:
+                        ec2 = boto3.resource('ec2')
+                        vpc = ec2.Vpc(event['ResourceProperties']['VpcId'])
+                        cidr = vpc.cidr_block
+                        responseData = {'Cidr': cidr}
+                        print(responseData)
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
                   except Exception as e:
                       responseData = {'Error': str(e)}
                       cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
