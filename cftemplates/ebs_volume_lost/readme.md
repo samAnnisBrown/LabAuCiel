@@ -13,14 +13,13 @@ Notification on update will be sent to SNS topic assigned.
 
 ### Setup
 1.  Launch the first CloudFormation template (**aws_ebs_vol_lost_cfn.yaml**).
-    * This template will build out the required StepFunctions State Machine and Lambda functions that would action a Personal Health Dashboard event.  It also creates a small Elasticsearch domain for visualisation.
+    * This template will build out the required Step and Lambda functions that will action a Personal Health Dashboard event.  It also creates a small Elasticsearch domain for visualisation.
 1.  Launch the second CloudFormation template (**aws_ebs_vol_lost_importantapp-cfn.yaml**).
-    * This template will build out the mock application that will be impacted by an EBS service disruption
-1. Wait for stack completiong
+    * This template will build out a mock application that will be impacted by an EBS service disruption
 
 ##### Creating a Mock Event
 
-1.  Copy the **VolumeId** from the Outputs of the **aws_ebs_vol_lost_importantapp-cfn.yaml** stack.
+1.  With both CloudFormation stacks completed - copy the **VolumeId** from the Outputs of the **aws_ebs_vol_lost_importantapp-cfn.yaml** stack.
 1.  Replace the **vol-xxxxxxxxxxxxxxxxx** values in the **phd-mock-event.json** with the copied value.
 1.  Increment the value of **id** and change the **time** to within the past 14 days in **phd-mock-event.json**.
 1.  Navigate to StepFunctions, and enter the State Machine **VolumeLost-**
