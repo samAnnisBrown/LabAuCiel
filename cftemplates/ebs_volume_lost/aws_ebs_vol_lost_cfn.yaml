@@ -3,7 +3,6 @@ AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   ChimeWebhookURL:
     Type: String
-    Default: "https://hooks.chime.aws/incomingwebhooks/a9c36f92-fcd0-4f06-9b86-cd8b267f676a?token=am5YUWZsbGZ8MXx3d2owTE9XT1ZES2s4M3lKbUNMUTBHZnl1UmNJWjQ2NEkxM1gweHFEX3pF"
     Description: Enter the webhook for Chime notifications.
   VpcId:
     Type: "AWS::EC2::VPC::Id"
