@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
-  ChimeWebhookURL:
-    Type: String
-    Description: Enter the webhook for Chime notifications.
+  SNSTopicName:
+      Type: "String"
+      Description: Please enter your SNS Topic Name. (SNS Topic must exist in the same region where this stack is launched).
   VpcId:
     Type: "AWS::EC2::VPC::Id"
     Description: Enter the VPC that the subnets belong to.
@@ -34,6 +34,54 @@ Resources:
         ManagedPolicyArns:
           - arn:aws:iam::aws:policy/AdministratorAccess
 
+  CloudWatchEventRule: 
+    Type: "AWS::Events::Rule"
+    Properties: 
+      Description: "EventRule"
+      RoleArn: !GetAtt ExecutionRole.Arn
+      EventPattern: 
+            source:
+              - aws.health
+            detail-type:
+              - AWS Health Event
+            detail:
+              service:
+                - EBS
+              eventTypeCategory:
+                - issue
+              eventTypeCode:
+                - AWS_EBS_VOLUME_LOST
+      Targets: 
+        -
+          Arn: !Ref StepFunctionVolumeLost
+          Id: StepFunctionVolumeLost
+          RoleArn: !GetAtt ExecutionRole.Arn
+      State: "ENABLED"
+  
+  MockCloudWatchEventRule: 
+    Type: "AWS::Events::Rule"
+    Properties: 
+      Description: "MockEventRule"
+      RoleArn: !GetAtt ExecutionRole.Arn
+      EventPattern: 
+            source:
+              - awshealth.mock
+            detail-type:
+              - AWS Health Event
+            detail:
+              service:
+                - EBS
+              eventTypeCategory:
+                - issue
+              eventTypeCode:
+                - AWS_EBS_VOLUME_LOST
+      Targets: 
+        -
+          Arn: !Ref StepFunctionVolumeLost
+          Id: StepFunctionVolumeLost
+          RoleArn: !GetAtt ExecutionRole.Arn
+      State: "ENABLED"
+
   # Elasticsearch Domain and Access Dependencies
   ElasticsearchDomain:
     Type: "AWS::Elasticsearch::Domain"
@@ -59,7 +107,6 @@ Resources:
               AWS: '*'
             Action: 'es:*'
             Resource: '*'
-
 
   ElasticsearchSecurityGroup:
       Type: "AWS::EC2::SecurityGroup"
@@ -406,58 +453,55 @@ Resources:
 
               return event
 
-  LambdaChimeNotification:
+  LambdaSNSNotification: 
     Type: "AWS::Lambda::Function"
-    Properties:
-      Handler: index.lambda_handler
+    Properties: 
+      Environment: 
+          Variables: 
+            SNSARN: 
+              Fn::Join:
+                - "" 
+                - - "arn:aws:sns:"
+                  - !Ref "AWS::Region"
+                  - ":"
+                  - !Ref "AWS::AccountId"
+                  - ":"
+                  - !Ref "SNSTopicName"
+      Handler: "index.handler"
       Role: !GetAtt ExecutionRole.Arn
-      Runtime: python2.7
-      Timeout: 25
-      Environment:
-        Variables:
-          CHIMEWEBHOOK: !Ref ChimeWebhookURL
-      Code:
+      Code: 
         ZipFile: |
-          #Sample Lambda Function to post notifications to a Chime room when an AWS Health event happens
-          from __future__ import print_function
-          import boto3
-          import json
-          import logging
-          import os
-          from urllib2 import Request, urlopen, URLError, HTTPError
-          # Setting up logging
-          logger = logging.getLogger()
-          logger.setLevel(logging.INFO)
-          # main function
-          def lambda_handler(event, context):
-
-            if 'PhdEventId' in event:
-              message = json.dumps(event['NOTIFMESSAGE'])
-              title = json.dumps(event['NOTIFMESSAGE']['Message'])
-            else:
-              message = json.dumps(event)
-              title = json.dumps(event['NOTIFMESSAGE']['Message'])
-
-            chime_message = {'Content': message}
-            chime_message_title = {'Content': title}
-            logger.info(str(chime_message))
-            webhookurl = str(os.environ['CHIMEWEBHOOK'])
-            req_title = Request(webhookurl, json.dumps(chime_message_title))
-            req = Request(webhookurl, json.dumps(chime_message))
-
-            try:
-              response = urlopen(req_title)
-              response.read()
-              logger.info("Message posted: %s", chime_message['Content'])
-              response = urlopen(req)
-              response.read()
-              logger.info("Message posted: %s", chime_message['Content'])
-            except HTTPError as e:
-              logger.error("Request failed : %d %s", e.code, e.reason)
-            except URLError as e:
-              logger.error("Server connection failed: %s", e.reason)
-
-            return(event)
+                  var AWS = require('aws-sdk');
+                  var sns = new AWS.SNS();
+                  const snsTopic =process.env.SNSARN; //use ARN
+                  exports.handler = (event, context, callback) => {
+                    
+                    if (event.NOTIFMESSAGE) {
+                      healthMessage = "AWS Health reported volume " + event.VolumeId + " has experienced AWS_EBS_VOLUME_LOST, AWS Health Tools tried to Restore and received message : " + event.NOTIFMESSAGE.Message 
+                    } else {
+                      healthMessage = "AWS Health reported volume " + event.VolumeId + " has experienced AWS_EBS_VOLUME_LOST.  No detailed message was received. Check Kibana for more details." 
+                    }
+                    eventName = "AWS_EBS_VOLUME_LOST"
+                    var snsPublishParams = {
+                        Message: healthMessage, 
+                        Subject: eventName,
+                        TopicArn: snsTopic
+                    };
+                    sns.publish(snsPublishParams, function(err, data) {
+                    if (err) {
+                        const snsPublishErrorMessage = `Error publishing AWS Health event to SNS`;
+                        console.log(snsPublishErrorMessage, err);
+                        callback(snsPublishErrorMessage);
+                        } 
+                    else {
+                        const snsPublishSuccessMessage = `Successfully got details from AWS Health event, ${!eventName} and published to SNS topic.`;
+                        console.log(snsPublishSuccessMessage, data);
+                        callback(null, event); //passthrough event
+                        }
+                    });
+                  };
+      Runtime: "nodejs4.3"
+      Timeout: "25"
 
   LambdaUpdateStack:
     Type: "AWS::Lambda::Function"
@@ -580,7 +624,7 @@ Resources:
                   },
                   "SendStartNotification": {
                     "Type": "Task",
-                    "Resource": "${LambdaChimeNotification}",
+                    "Resource": "${LambdaSNSNotification}",
                     "Next": "FindVolumeDetails"
                   },
                   "FindVolumeDetails": {
@@ -656,7 +700,7 @@ Resources:
                   },
                   "SendFailNotification": {
                     "Type": "Task",
-                    "Resource": "${LambdaChimeNotification}",
+                    "Resource": "${LambdaSNSNotification}",
                     "Next": "Fail"
                   },
                   "Fail": {
@@ -742,12 +786,12 @@ Resources:
                   },
                   "SendSuccessNotification": {
                     "Type": "Task",
-                    "Resource": "${LambdaChimeNotification}",
+                    "Resource": "${LambdaSNSNotification}",
                     "End": true
                   }
                 }
               }
-            - { LambdaChimeNotification: !GetAtt LambdaChimeNotification.Arn, LambdaElasticsearchLoad: !GetAtt LambdaElasticsearchLoad.Arn, LambdaGatherEvents: !GetAtt LambdaGatherEvents.Arn, LambdaCheckStack: !GetAtt LambdaCheckStack.Arn, LambdaUpdateStack: !GetAtt LambdaUpdateStack.Arn, LambdaFindAmi: !GetAtt LambdaFindAmi.Arn, LambdaCheckSnapshot: !GetAtt LambdaCheckSnapshot.Arn, LambdaFindInstanceId: !GetAtt LambdaFindInstanceId.Arn, LambdaFindVolume: !GetAtt LambdaFindVolume.Arn }
+            - { LambdaSNSNotification: !GetAtt LambdaSNSNotification.Arn, LambdaElasticsearchLoad: !GetAtt LambdaElasticsearchLoad.Arn, LambdaGatherEvents: !GetAtt LambdaGatherEvents.Arn, LambdaCheckStack: !GetAtt LambdaCheckStack.Arn, LambdaUpdateStack: !GetAtt LambdaUpdateStack.Arn, LambdaFindAmi: !GetAtt LambdaFindAmi.Arn, LambdaCheckSnapshot: !GetAtt LambdaCheckSnapshot.Arn, LambdaFindInstanceId: !GetAtt LambdaFindInstanceId.Arn, LambdaFindVolume: !GetAtt LambdaFindVolume.Arn }
 
 Outputs:
   KibanaURL:
