@@ -15,12 +15,14 @@ from time import sleep
 
 # Argument Creation
 parser = argparse.ArgumentParser(description="This scrupts uploads CUR data to and manipulate Elasticsearch indices")
+
 parser.add_argument('--elasticsearch_endpoint',
                     default='vpc-wildwest-gw7tbux4h6vom3xqucxpqqusre.ap-southeast-2.es.amazonaws.com',
                     help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
 parser.add_argument('--region',
                     default='ap-southeast-2',
                     help='Defines the AWS Region used for authentiation.')
+
 # Working with Indexes
 parser.add_argument('-l', '--index_list', action='store_true',
                     help='Lists the indices in the cluster described by the --elasticsearch_endpoint parameter.')
@@ -225,8 +227,16 @@ def uploadToElasticsearch(actions, indexName):
         print("[DRYRUN] - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
 
 
+# List Indices
+def listIndex(esEndpoint):
+    response = requests.get('https://' + esEndpoint + '/_cat/indices?v&pretty')
+    print(response.text)
+    print('[LISTING] - Indices')
+    sys.exit()
+
 # Delete the specified ES index
 def deleteElasticsearchIndex(indexName):
+    print('[--DELETING--] - Index ' + indexName)
     es = returnElasticsearchAuth()
     es.indices.delete(index=indexName, ignore=[400, 404])
 
@@ -238,7 +248,6 @@ def returnElasticsearchAuth():
                        connection_class=RequestsHttpConnection)
 
     return es
-
 
 # Return S3 auth, either via STS assume role, or direct local credentials
 def returnS3Auth():
@@ -260,23 +269,6 @@ def returnS3Auth():
         s3 = boto3.client('s3', region_name=args.region)
 
     return s3
-
-
-# List Indices
-def listIndex(esEndpoint):
-    response = requests.get('https://' + esEndpoint + '/_cat/indices?v&pretty')
-    print(response.text)
-    print('[LISTING] - Indices')
-    sys.exit()
-
-
-# Delete named index
-def deleteIndex(indexName, esEndpoint):
-    print('[--DELETING--] - Index ' + indexName)
-    response = requests.delete('https://' + esEndpoint + '/' + indexName + '?pretty')
-    print(response.text)
-    sys.exit()
-
 
 # Get the latest CUR files for upload
 def getLatestCurFile():
@@ -357,12 +349,12 @@ def manualCurImport(bucket, keys):
 
 
 if args.index_delete:
-    deleteIndex(args.index_delete, args.elasticsearch_endpoint)
-if args.index_list:
+    deleteElasticsearchIndex(args.index_delete)
+elif args.index_list:
     listIndex(args.elasticsearch_endpoint)
-if customerImport:
+elif customerImport:
     args.key = getLatestCurFile()
-if args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
+elif args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
     manualCurImport(args.bucket, args.key)
 
 print("--Finished--")
