@@ -214,17 +214,17 @@ def lambda_handler(event, context):
 def uploadToElasticsearch(actions, indexName):
     global totalLinesUploadedCount
 
-    if args.dryrun is False:
+    if args.dryrun:
+        totalLinesUploadedCount += len(actions)
+        percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
+        print("[DRYRUN] - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
+    else:
         es = returnElasticsearchAuth()
         totalLinesUploadedCount += len(actions)
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
 
         helpers.bulk(es, actions)
         print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
-    else:
-        totalLinesUploadedCount += len(actions)
-        percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
-        print("[DRYRUN] - " + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
 
 
 # List Indices
@@ -233,6 +233,7 @@ def listIndex(esEndpoint):
     print(response.text)
     print('[LISTING] - Indices')
     sys.exit()
+
 
 # Delete the specified ES index
 def deleteElasticsearchIndex(indexName):
@@ -248,6 +249,7 @@ def returnElasticsearchAuth():
                        connection_class=RequestsHttpConnection)
 
     return es
+
 
 # Return S3 auth, either via STS assume role, or direct local credentials
 def returnS3Auth():
@@ -269,6 +271,14 @@ def returnS3Auth():
         s3 = boto3.client('s3', region_name=args.region)
 
     return s3
+
+
+def getLatestCurFileNew():
+    s3 = returnS3Auth()
+    listObjectsOutput = s3.list_objects_v2(Bucket=args.bucket)
+    print(listObjectsOutput)
+    sys.exit()
+
 
 # Get the latest CUR files for upload
 def getLatestCurFile():
@@ -353,7 +363,7 @@ if args.index_delete:
 elif args.index_list:
     listIndex(args.elasticsearch_endpoint)
 elif customerImport:
-    args.key = getLatestCurFile()
+    args.key = getLatestCurFileNew()
 elif args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
     manualCurImport(args.bucket, args.key)
 
