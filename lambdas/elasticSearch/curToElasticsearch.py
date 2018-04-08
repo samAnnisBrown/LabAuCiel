@@ -274,9 +274,34 @@ def returnS3Auth():
 
 
 def getLatestCurFileNew():
+    # Create dit/list
+    curFiles = {}
+    outputList = []
+    reportsList = []
+
     s3 = returnS3Auth()
     listObjectsOutput = s3.list_objects_v2(Bucket=args.bucket)
-    print(listObjectsOutput)
+
+    # While the list is truncated, keep calling an appending to outputList
+    while listObjectsOutput['IsTruncated']:
+        outputList.append(listObjectsOutput)
+        listObjectsOutput = s3.list_objects_v2(Bucket=args.bucket, ContinuationToken=listObjectsOutput['NextContinuationToken'])
+    outputList.append(listObjectsOutput)
+
+    # Let's make a new list that only contains CUR files (csv.gz)
+    for listObjectsOutput in outputList:
+        for s3Object in listObjectsOutput['Contents']:
+            if '-Manifest.json' in s3Object['Key'] and folderFilter in s3Object['Key']:
+                curFiles[s3Object['Key']] = s3Object['LastModified'].isoformat()
+                # Create a list of all the different folders (i.e. months) where we might want to find the 'latest'
+                try:
+                    searchKey = re.search("(.+/\d+-\d+)/", s3Object['Key']).group(1)
+                    if searchKey not in reportsList:
+                        reportsList.append(searchKey)
+                except AttributeError:
+                    searchKey = None
+
+    print(curFiles)
     sys.exit()
 
 
