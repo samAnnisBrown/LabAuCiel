@@ -11,8 +11,6 @@ from gzip import GzipFile       # So we can gunzip stuff
 from io import BytesIO          # Stream bytes from S3
 from elasticsearch import helpers   # To interact with Elasticsearch
 from elasticsearch import Elasticsearch, RequestsHttpConnection     # To interact with Elasticseardh
-from aws_requests_auth.aws_auth import AWSRequestsAuth
-from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
 from time import sleep
 
 # Argument Creation
@@ -20,6 +18,9 @@ parser = argparse.ArgumentParser(description="This scrupts uploads CUR data to a
 parser.add_argument('--elasticsearch_endpoint',
                     default='vpc-wildwest-gw7tbux4h6vom3xqucxpqqusre.ap-southeast-2.es.amazonaws.com',
                     help='Defines the Elasticsearch endpoint FQDN (do not use URL)')
+parser.add_argument('--region',
+                    default='ap-southeast-2',
+                    help='Defines the AWS Region used for authentiation.')
 # Working with Indexes
 parser.add_argument('-l', '--index_list', action='store_true',
                     help='Lists the indices in the cluster described by the --elasticsearch_endpoint parameter.')
@@ -232,24 +233,9 @@ def deleteElasticsearchIndex(indexName):
 
 # Return ES auth, depending on whether it's in a Lambda function or not
 def returnElasticsearchAuth():
-    if not args.cur_load:
-        # Retrieve Access details (Lambda IAM role must have access to ES domain to work)
-        awsauth = AWSRequestsAuth(aws_access_key=os.environ['AWS_ACCESS_KEY_ID'],
-                                  aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
-                                  aws_token=os.environ['AWS_SESSION_TOKEN'],
-                                  aws_host=args.elasticsearch_endpoint,
-                                  aws_region='ap-southeast-2',
-                                  aws_service='es')
-    else:
-        # If running outside of a Lambda function, retrieve creds using standard BOTO logic
-        awsauth = BotoAWSRequestsAuth(aws_host=args.elasticsearch_endpoint,
-                                      aws_region='ap-southeast-2',
-                                      aws_service='es')
-
     es = Elasticsearch(host=args.elasticsearch_endpoint,
                        port=80,
-                       connection_class=RequestsHttpConnection,
-                       http_auth=awsauth)
+                       connection_class=RequestsHttpConnection)
 
     return es
 
@@ -266,12 +252,12 @@ def returnS3Auth():
         creds = assumed_role['Credentials']
 
         s3 = boto3.client('s3',
-                          region_name='ap-southeast-2',
+                          region_name=args.region,
                           aws_access_key_id=creds['AccessKeyId'],
                           aws_secret_access_key=creds['SecretAccessKey'],
                           aws_session_token=creds['SessionToken'], )
     else:
-        s3 = boto3.client('s3', region_name='ap-southeast-2')
+        s3 = boto3.client('s3', region_name=args.region)
 
     return s3
 
