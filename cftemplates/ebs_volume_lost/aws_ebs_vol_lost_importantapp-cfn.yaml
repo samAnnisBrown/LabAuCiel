@@ -109,7 +109,7 @@ Resources:
 
                         client = boto3.client('ec2', region_name=region)
 
-                        filters = [{'Name': 'name', 'Values': ['amzn-ami-hvm-*']}, {'Name': 'description', 'Values': ['Amazon Linux AMI*']}, {'Name': 'architecture', 'Values': ['x86_64']}, {'Name': 'owner-alias', 'Values': ['amazon']}, {'Name': 'RootDeviceType', 'Values': ['ebs']}]
+                        filters = [{'Name': 'name', 'Values': ['amzn-ami-hvm-*']}, {'Name': 'description', 'Values': ['Amazon Linux AMI*']}, {'Name': 'architecture', 'Values': ['x86_64']}, {'Name': 'owner-alias', 'Values': ['amazon']}, {'Name': 'root-device-type', 'Values': ['ebs']}]
                         response = client.describe_images(Owners=['amazon'], Filters=filters)
 
                         ami = newest_image(response['Images'])
