@@ -1,9 +1,7 @@
 import csv          # To deal with the CUR CSVs
 import boto3        # To interact with AWS
-import os           # To get OS environmental variabls for auth
 import re           # For all the regex
 import sys          # To exit the script when things go wrong or are finished
-import requests     # To interact with Elasticsearch (like curl)
 import argparse     # For all the aguments
 import operator     # For some sorting stuff
 
@@ -23,11 +21,7 @@ parser.add_argument('--region',
                     default='ap-southeast-2',
                     help='Defines the AWS Region used for authentiation.')
 
-# Working with Indexes
-parser.add_argument('-l', '--index_list', action='store_true',
-                    help='Lists the indices in the cluster described by the --elasticsearch_endpoint parameter.')
-parser.add_argument('-d', '--index_delete',
-                    help='Deletes an Elasticsearch index.  Enter the index name to delete')
+
 
 # Auto uploading of CUR data for specific customers
 parser.add_argument('-c', '--customer',
@@ -227,14 +221,6 @@ def uploadToElasticsearch(actions, indexName):
         print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
 
 
-# List Indices
-def listIndex(esEndpoint):
-    response = requests.get('https://' + esEndpoint + '/_cat/indices?v&pretty')
-    print(response.text)
-    print('[LISTING] - Indices')
-    sys.exit()
-
-
 # Delete the specified ES index
 def deleteElasticsearchIndex(indexName):
     print('[--DELETING--] - Index ' + indexName)
@@ -383,11 +369,7 @@ def manualCurImport(bucket, keys):
             }, "")
 
 
-if args.index_delete:
-    deleteElasticsearchIndex(args.index_delete)
-elif args.index_list:
-    listIndex(args.elasticsearch_endpoint)
-elif customerImport:
+if customerImport:
     args.key = getLatestCurFileNew()
 elif args.cur_load:  # If not in a Lambda, launch main function and pass S3 event JSON
     manualCurImport(args.bucket, args.key)
