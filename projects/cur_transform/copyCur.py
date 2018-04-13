@@ -1,6 +1,7 @@
 import boto3
 import re
 import json
+import sys
 
 
 def lambda_handler(event, context):
@@ -44,7 +45,9 @@ def lambda_handler(event, context):
                 keyDst = bucketSrc + '/' + reportMonth + '/' + objectName
                 
                 fileData = s3c.get_object(Bucket=bucketSrc, Key=keySrc)
-                s3dst.put_object(Bucket=bucketDst, Key=keyDst, Body=fileData.read().decode('utf8'))
+                print(fileData)
+                sys.exit()
+                s3dst.put_object(Bucket=bucketDst, Key=keyDst, Body=fileData)
                 
                 #objectName = re.search(".+/(.*)", keySrc).group(1)
                 #objectSrc = { 'Bucket': bucketSrc, 'Key': keySrc }
