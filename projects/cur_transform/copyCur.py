@@ -34,13 +34,14 @@ def lambda_handler(event, context):
             manifestFile = s3c.get_object(Bucket=bucketSrc, Key=manifestLocation)
             manifestFileContents = manifestFile['Body'].read().decode('utf-8')
             manifestJsonContents = json.loads(manifestFileContents)
+            print(manifestJsonContents)
 
             for keySrc in manifestJsonContents['reportKeys']:
                 objectName = re.search(".+/(.*)", keySrc).group(1)
                 objectSrc = { 'Bucket': bucketSrc, 'Key': keySrc }
                 objectDst = report + '/' + reportMonth + '/' + objectName
                 bucket = s3r.Bucket(bucketDst)
-                print('[COPYING]\nFROM: s3://' + bucketSrc + '/' + manifestLocation + '\nTO: s3://' + bucketDst + '/' + objectDst)
+                print('[COPYING]\nFROM: s3://' + bucketSrc + '/' + keySrc + '\nTO: s3://' + bucketDst + '/' + objectDst)
                 bucket.copy(objectSrc, objectDst)
             
         except Exception as e:
