@@ -34,7 +34,7 @@ def lambda_handler(event, context):
             manifestFile = s3c.get_object(Bucket=bucketSrc, Key=manifestLocation)
             manifestFileContents = manifestFile['Body'].read().decode('utf-8')
             manifestJsonContents = json.loads(manifestFileContents)
-            print(manifestJsonContents)
+            print(manifestJsonContents['reportKeys'])
 
             for keySrc in manifestJsonContents['reportKeys']:
                 objectName = re.search(".+/(.*)", keySrc).group(1)
