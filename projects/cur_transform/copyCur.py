@@ -86,7 +86,7 @@ def testing():
 
     
     objects = s3c.list_objects_v2(Bucket=bucketSrc)
-    for key in objects:
+    for key in objects['Prefix']:
         print(key)
     
 testing()
