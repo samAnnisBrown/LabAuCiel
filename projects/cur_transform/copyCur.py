@@ -35,6 +35,7 @@ def lambda_handler(event, context):
             manifestFileContents = manifestFile['Body'].read().decode('utf-8')
             manifestJsonContents = json.loads(manifestFileContents)
             print(manifestJsonContents['reportKeys'])
+            print(len(manifestJsonContents['reportKeys']))
 
             for keySrc in manifestJsonContents['reportKeys']:
                 objectName = re.search(".+/(.*)", keySrc).group(1)
