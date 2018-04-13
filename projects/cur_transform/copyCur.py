@@ -1,7 +1,6 @@
 import boto3
 import re
 import json
-import sys
 
 
 def lambda_handler(event, context):
@@ -34,7 +33,7 @@ def lambda_handler(event, context):
         s3src = getS3Auth(region, 'client', roleArn)
         s3dst = getS3Auth(region, 'client', None)
     
-    if prefix is None:
+    if prefix == '':
         keyPrefix =  '/' + report + '/'
     else:
         keyPrefix = prefix + '/' + report + '/'
@@ -58,15 +57,9 @@ def lambda_handler(event, context):
                 fileData = s3src.get_object(Bucket=bucketSrc, Key=keySrc)
                 s3dst.put_object(Bucket=bucketDst, Key=keyDst, Body=fileData['Body'].read())
                 
-                #objectName = re.search(".+/(.*)", keySrc).group(1)
-                #objectSrc = { 'Bucket': bucketSrc, 'Key': keySrc }
-                #objectDst = report + '/' + reportMonth + '/' + objectName
-                #bucket = s3r.Bucket(bucketDst)
-                print('[COPYING]\nFROM: s3://' + bucketSrc + '/' + keySrc + '\nTO: s3://' + bucketDst + '/' + keyDst)
-                #bucket.copy(objectSrc, objectDst)
+                print('[COPYING] - FROM: s3://' + bucketSrc + 'TO: s3://' + bucketDst + '/' + keyDst)
             
-        except Exception as e:
-            print(e)
+        except:
             pass
 
 
@@ -106,19 +99,5 @@ def getS3Auth(region, accessType, roleArn):
 
     return s3
     
-
-def testing():
-    bucketSrc = 'rmit-billing-reports'
-    region = 'ap-southeast-2'
-    roleArn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
-    
-    s3c = getS3Auth(region, 'client', roleArn)
-
-    
-    objects = s3c.list_objects_v2(Bucket=bucketSrc)
-    for key in objects['Contents']:
-        print(key)
-    
-#testing()
 
 lambda_handler(None, None)
