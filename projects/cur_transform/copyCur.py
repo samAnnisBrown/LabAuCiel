@@ -9,7 +9,7 @@ def lambda_handler(event, context):
     bucketSrc = 'rmit-cost-reports'
     bucketDst = 'ansamual-cur-sorted'
     #prefix = 'QuickSight_RedShift'
-    prefix = None
+    prefix = ''
     #report = 'QuickSight_RedShift_CostReports'
     report = 'Hourly-report'
     region = 'ap-southeast-2'
@@ -18,7 +18,10 @@ def lambda_handler(event, context):
     s3c = getS3Auth(region, 'client', roleArn)
     s3r = getS3Auth(region, 'resource', roleArn)
     
-    keyPrefix = prefix + '/' + report + '/'
+    if prefix is None:
+        keyPrefix =  '/' + report + '/'
+    else:
+        keyPrefix = prefix + '/' + report + '/'
     
     objects = s3c.list_objects_v2(Bucket=bucketSrc,
                                  Delimiter='/',
