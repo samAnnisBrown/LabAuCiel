@@ -8,34 +8,37 @@ def lambda_handler(event, context):
     
     # REPORT DETAILS
 
-    # bucketSrc = 'ansamual-costreports'
-    # prefix = 'QuickSight_RedShift'
-    # report = 'QuickSight_RedShift_CostReports'
+    bucketSrc = 'ansamual-costreports'
+    prefix = 'QuickSight_RedShift'
+    report = 'QuickSight_RedShift_CostReports'
+    roleArn = ''
 
     # bucketSrc = 'rmit-billing-reports'
     # prefix = 'CUR'
     # report = 'Hourly-report'
     # roleArn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
     
-    bucketSrc = 'sportsbet-billing-data'
-    prefix = 'hourly'
-    report = 'sportsbet-hourly-cost-report'
-    roleArn = 'arn:aws:iam::794026524096:role/awsEnterpriseSupportCURAccess'
+    # bucketSrc = 'sportsbet-billing-data'
+    # prefix = 'hourly'
+    # report = 'sportsbet-hourly-cost-report'
+    # roleArn = 'arn:aws:iam::794026524096:role/awsEnterpriseSupportCURAccess'
 
     # DESTINATION DETAILS
     region = 'ap-southeast-2'
     bucketDst = 'ansamual-cur-sorted'
 
-    s3c = getS3Auth(region, 'client', roleArn)
-    s3r = getS3Auth(region, 'resource', roleArn)
-    s3dst = getS3Auth(region, 'client', None)
+    if roleArn is None:
+        s3src = getS3Auth(region, 'client', roleArn)
+        s3dst = getS3Auth(region, 'client', None)
+    except NameError:
+        s3src, s3dst = getS3Auth(region, 'client', None)
     
     if prefix is None:
         keyPrefix =  '/' + report + '/'
     else:
         keyPrefix = prefix + '/' + report + '/'
     
-    objects = s3c.list_objects_v2(Bucket=bucketSrc,
+    objects = s3src.list_objects_v2(Bucket=bucketSrc,
                                  Delimiter='/',
                                  Prefix=keyPrefix)
 
@@ -43,7 +46,7 @@ def lambda_handler(event, context):
         try:
             reportMonth = re.search(".+/(\d+)-", prefix['Prefix']).group(1)
             manifestLocation = prefix['Prefix'] + report + '-Manifest.json'
-            manifestFile = s3c.get_object(Bucket=bucketSrc, Key=manifestLocation)
+            manifestFile = s3src.get_object(Bucket=bucketSrc, Key=manifestLocation)
             manifestFileContents = manifestFile['Body'].read().decode('utf-8')
             manifestJsonContents = json.loads(manifestFileContents)
 
@@ -51,7 +54,7 @@ def lambda_handler(event, context):
                 objectName = re.search(".+/(.*)", keySrc).group(1)
                 keyDst = bucketSrc + '/' + reportMonth + '/' + objectName
                 
-                fileData = s3c.get_object(Bucket=bucketSrc, Key=keySrc)
+                fileData = s3src.get_object(Bucket=bucketSrc, Key=keySrc)
                 s3dst.put_object(Bucket=bucketDst, Key=keyDst, Body=fileData['Body'].read())
                 
                 #objectName = re.search(".+/(.*)", keySrc).group(1)
@@ -75,7 +78,6 @@ def getS3Auth(region, accessType, roleArn):
         )
 
         creds = assumed_role['Credentials']
-        print(creds)
         
         if accessType == 'client':
             s3 = boto3.client('s3',
