@@ -21,8 +21,6 @@ parser.add_argument('--region',
                     default='ap-southeast-2',
                     help='Defines the AWS Region used for authentiation.')
 
-
-
 # Auto uploading of CUR data for specific customers
 parser.add_argument('-c', '--customer',
                     help='Customer - i.e. RMIT, Sportsbet')
