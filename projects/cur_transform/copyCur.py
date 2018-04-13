@@ -78,7 +78,7 @@ def getS3Auth(region, accessType, roleArn):
     
 
 def testing():
-    bucketSrc = 'rmit-billing-report'
+    bucketSrc = 'rmit-billing-reports'
     region = 'ap-southeast-2'
     roleArn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
     
