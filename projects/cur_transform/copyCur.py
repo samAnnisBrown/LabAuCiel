@@ -43,14 +43,14 @@ def lambda_handler(event, context):
                 objectName = re.search(".+/(.*)", keySrc).group(1)
                 keyDst = bucketSrc + '/' + reportMonth + '/' + objectName
                 
-                s3object = s3c.get_object(Bucket=bucketSrc, Key=keySrc)
-                s3dst.put_object(Bucket=bucketDst, Key=keyDst)
+                fileData = s3c.get_object(Bucket=bucketSrc, Key=keySrc)
+                s3dst.put_object(Bucket=bucketDst, Key=keyDst, Body=fileData)
                 
                 #objectName = re.search(".+/(.*)", keySrc).group(1)
                 #objectSrc = { 'Bucket': bucketSrc, 'Key': keySrc }
                 #objectDst = report + '/' + reportMonth + '/' + objectName
                 #bucket = s3r.Bucket(bucketDst)
-                #print('[COPYING]\nFROM: s3://' + bucketSrc + '/' + keySrc + '\nTO: s3://' + bucketDst + '/' + objectDst)
+                print('[COPYING]\nFROM: s3://' + bucketSrc + '/' + keySrc + '\nTO: s3://' + bucketDst + '/' + keyDst)
                 #bucket.copy(objectSrc, objectDst)
             
         except Exception as e:
