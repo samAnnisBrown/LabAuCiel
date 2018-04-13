@@ -28,10 +28,10 @@ def lambda_handler(event, context):
     bucketDst = 'ansamual-cur-sorted'
 
     if roleArn is None:
+        s3src, s3dst = getS3Auth(region, 'client', None)
+    else:
         s3src = getS3Auth(region, 'client', roleArn)
         s3dst = getS3Auth(region, 'client', None)
-    except NameError:
-        s3src, s3dst = getS3Auth(region, 'client', None)
     
     if prefix is None:
         keyPrefix =  '/' + report + '/'
