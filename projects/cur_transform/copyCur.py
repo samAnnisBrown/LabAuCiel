@@ -16,7 +16,8 @@ def lambda_handler(event, context):
     roleArn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
 
     s3c = getS3Auth(region, 'client', roleArn)
-    s3r = getS3Auth(region, 'resource', None)
+    s3r = getS3Auth(region, 'resource', roleArn)
+    s3dst = getS3Auth(region, 'client', None)
     
     if prefix is None:
         keyPrefix =  '/' + report + '/'
@@ -39,6 +40,12 @@ def lambda_handler(event, context):
 
             for keySrc in manifestJsonContents['reportKeys']:
                 print(keySrc)
+                objectName = re.search(".+/(.*)", keySrc).group(1)
+                keyDst = bucketSrc + '/' + reportMonth + '/' + objectName
+                
+                s3object = s3c.get_object(Bucket=bucketSrc, Key=keySrc)
+                s3dst.put_object(Bucket=bucketDst, Key=keyDst)
+                
                 #objectName = re.search(".+/(.*)", keySrc).group(1)
                 #objectSrc = { 'Bucket': bucketSrc, 'Key': keySrc }
                 #objectDst = report + '/' + reportMonth + '/' + objectName
