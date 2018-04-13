@@ -45,9 +45,7 @@ def lambda_handler(event, context):
                 keyDst = bucketSrc + '/' + reportMonth + '/' + objectName
                 
                 fileData = s3c.get_object(Bucket=bucketSrc, Key=keySrc)
-                print(fileData)
-                sys.exit()
-                s3dst.put_object(Bucket=bucketDst, Key=keyDst, Body=fileData)
+                s3dst.put_object(Bucket=bucketDst, Key=keyDst, Body=fileData['Body'])
                 
                 #objectName = re.search(".+/(.*)", keySrc).group(1)
                 #objectSrc = { 'Bucket': bucketSrc, 'Key': keySrc }
