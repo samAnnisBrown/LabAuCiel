@@ -16,7 +16,7 @@ def lambda_handler(event, context):
     roleArn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
 
     s3c = getS3Auth(region, 'client', roleArn)
-    s3r = getS3Auth(region, 'resource', roleArn)
+    s3r = getS3Auth(region, 'resource', None)
     
     if prefix is None:
         keyPrefix =  '/' + report + '/'
@@ -38,12 +38,13 @@ def lambda_handler(event, context):
             print(len(manifestJsonContents['reportKeys']))
 
             for keySrc in manifestJsonContents['reportKeys']:
-                objectName = re.search(".+/(.*)", keySrc).group(1)
-                objectSrc = { 'Bucket': bucketSrc, 'Key': keySrc }
-                objectDst = report + '/' + reportMonth + '/' + objectName
-                bucket = s3r.Bucket(bucketDst)
-                print('[COPYING]\nFROM: s3://' + bucketSrc + '/' + keySrc + '\nTO: s3://' + bucketDst + '/' + objectDst)
-                bucket.copy(objectSrc, objectDst)
+                print(keySrc)
+                #objectName = re.search(".+/(.*)", keySrc).group(1)
+                #objectSrc = { 'Bucket': bucketSrc, 'Key': keySrc }
+                #objectDst = report + '/' + reportMonth + '/' + objectName
+                #bucket = s3r.Bucket(bucketDst)
+                #print('[COPYING]\nFROM: s3://' + bucketSrc + '/' + keySrc + '\nTO: s3://' + bucketDst + '/' + objectDst)
+                #bucket.copy(objectSrc, objectDst)
             
         except Exception as e:
             print(e)
