@@ -27,7 +27,7 @@ def lambda_handler(event, context):
     region = 'ap-southeast-2'
     bucketDst = 'ansamual-cur-sorted'
 
-    if roleArn is None:
+    if roleArn == '':
         s3src, s3dst = getS3Auth(region, 'client', None)
     else:
         s3src = getS3Auth(region, 'client', roleArn)
