@@ -46,6 +46,7 @@ def lambda_handler(event, context):
                 bucket.copy(objectSrc, objectDst)
             
         except Exception as e:
+            print(e)
             pass
 
 
