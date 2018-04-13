@@ -9,7 +9,7 @@ def lambda_handler(event, context):
     bucketSrc = 'rmit-billing-reports'
     bucketDst = 'ansamual-cur-sorted'
     #prefix = 'QuickSight_RedShift'
-    prefix = ''
+    prefix = 'CUR'
     #report = 'QuickSight_RedShift_CostReports'
     report = 'Hourly-report'
     region = 'ap-southeast-2'
