@@ -28,7 +28,8 @@ def lambda_handler(event, context):
     bucketDst = 'ansamual-cur-sorted'
 
     if roleArn == '':
-        s3src, s3dst = getS3Auth(region, 'client', None)
+        s3src = getS3Auth(region, 'client', None)
+        s3dst = s3src
     else:
         s3src = getS3Auth(region, 'client', roleArn)
         s3dst = getS3Auth(region, 'client', None)
