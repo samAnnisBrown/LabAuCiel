@@ -6,7 +6,7 @@ import json
 def lambda_handler(event, context):
 
     #bucketSrc = 'ansamual-costreports'
-    bucketSrc = 'rmit-cost-reports'
+    bucketSrc = 'rmit-billing-reports'
     bucketDst = 'ansamual-cur-sorted'
     #prefix = 'QuickSight_RedShift'
     prefix = ''
