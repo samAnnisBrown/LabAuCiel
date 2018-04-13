@@ -64,7 +64,7 @@ def getS3Auth(region, accessType, roleArn):
                               aws_secret_access_key=creds['SecretAccessKey'],
                               aws_session_token=creds['SessionToken'], )
         else:
-            print('Didn\'t get any creds)
+            print('Didn\'t get any creds')
     else:
         if accessType == 'client':
             s3 = boto3.client('s3', region_name=region)
@@ -72,7 +72,7 @@ def getS3Auth(region, accessType, roleArn):
         elif accessType == 'resource':
             s3 = boto3.resource('s3', region_name=region)
         else:
-            print('Didn\'t get any creds)
+            print('Didn\'t get any creds')
 
     return s3
     
