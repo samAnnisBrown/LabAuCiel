@@ -5,16 +5,26 @@ import sys
 
 
 def lambda_handler(event, context):
+    
+    # REPORT DETAILS
 
-    #bucketSrc = 'ansamual-costreports'
-    bucketSrc = 'rmit-billing-reports'
-    bucketDst = 'ansamual-cur-sorted'
-    #prefix = 'QuickSight_RedShift'
-    prefix = 'CUR'
-    #report = 'QuickSight_RedShift_CostReports'
-    report = 'Hourly-report'
+    # bucketSrc = 'ansamual-costreports'
+    # prefix = 'QuickSight_RedShift'
+    # report = 'QuickSight_RedShift_CostReports'
+
+    # bucketSrc = 'rmit-billing-reports'
+    # prefix = 'CUR'
+    # report = 'Hourly-report'
+    # roleArn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
+    
+    bucketSrc = 'sportsbet-billing-data'
+    prefix = 'hourly'
+    report = 'sportsbet-hourly-cost-report'
+    roleArn = 'arn:aws:iam::794026524096:role/awsEnterpriseSupportCURAccess'
+
+    # DESTINATION DETAILS
     region = 'ap-southeast-2'
-    roleArn = 'arn:aws:iam::182132151869:role/AWSEnterpriseSupportCURAccess'
+    bucketDst = 'ansamual-cur-sorted'
 
     s3c = getS3Auth(region, 'client', roleArn)
     s3r = getS3Auth(region, 'resource', roleArn)
@@ -36,11 +46,8 @@ def lambda_handler(event, context):
             manifestFile = s3c.get_object(Bucket=bucketSrc, Key=manifestLocation)
             manifestFileContents = manifestFile['Body'].read().decode('utf-8')
             manifestJsonContents = json.loads(manifestFileContents)
-            print(manifestJsonContents['reportKeys'])
-            print(len(manifestJsonContents['reportKeys']))
 
             for keySrc in manifestJsonContents['reportKeys']:
-                print(keySrc)
                 objectName = re.search(".+/(.*)", keySrc).group(1)
                 keyDst = bucketSrc + '/' + reportMonth + '/' + objectName
                 
