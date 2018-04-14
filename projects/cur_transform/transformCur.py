@@ -2,13 +2,6 @@ import boto3
 import re
 from io import BytesIO
 import gzip
-import time
-import gc
-import csv
-import os
-import psutil
-
-process = psutil.Process(os.getpid())
 
 
 def lambda_handler(event, context):
@@ -17,15 +10,6 @@ def lambda_handler(event, context):
     key = event["Records"][0]["s3"]["object"]["key"]
     fileName = re.search(".+/(.+)\.", key).group(1)
     yearMonth = re.search(".+/(\d+)/.+", key).group(1)
-
-    print(yearMonth)
-    print(fileName)
-
-    # Complete Transform
-    #print("After Unzip - " + str(process.memory_info().rss))
-    #transformToS3(curCsv, fileName, yearMonth)
-    #updateAthena(curCsv)
-
 
     # Download S3 file
     s3 = getAuth('ap-southeast-2', 's3', 'client')
@@ -37,16 +21,10 @@ def lambda_handler(event, context):
     bytestream = BytesIO(s3file['Body'].read())
 
     with gzip.open(bytestream, 'rt') as file:
+        print('Creating new zip')
         file_buffer = BytesIO()
         with gzip.GzipFile(fileobj=file_buffer, mode='w') as f:
-            for row in file.readlines()[0:1]:
-                orginalList = row.split(',')
-                for item in orginalList:
-                    print(item)
-                #f.write(str(row).encode('utf-8'))
-
-            for row in file.readlines()[1:]:
-                print(row)
+            for row in file.readlines():
                 if '"' in row:
                     # Split on quotes
                     lineAsList = row.split('"')
@@ -57,25 +35,25 @@ def lambda_handler(event, context):
                             lineAsList[i] = part.replace(",", ".")
                     # Rejoin line as string
                     row = ''.join(lineAsList)
-                    #print(line)
+                elif 'identity/LineItemId' in row:
+                    originalList = row.rstrip().split(',')
+                    uniqueList = []
+
+                    for index, item in enumerate(originalList):
+                        if item.lower() in uniqueList:
+                            originalList[index] = item + '0'
+                        else:
+                            uniqueList.append(item.lower())
+
+                    row = ','.join(originalList) + '\n'
+
                 f.write(str(row).encode('utf-8'))
-
-
-        # file_buffer = BytesIO()
-        # with gzip.GzipFile(fileobj=file_buffer, mode='w') as f:
-        #     reader = csv.reader(file, delimiter=',', quotechar='"')
-        #     for row in reader:
-        #         for index, item in enumerate(row):
-        #             row[index] = item.replace(",", "|,")
-        #         f.write(str(row).encode('utf-8'))
 
     file_buffer.seek(0)
     # Put the object in S3
     uploadKey = 'rmit' + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName + '.gz'
     print('Uploading unzipped and transformed CSV to ' + uploadKey.lower())
     s3.put_object(Bucket='ansamual-cur-transformed', Key=uploadKey.lower(), Body=file_buffer)
-    #outfile = GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
-    #gc.collect()
 
 
 def getAuth(region, service, accessType, roleArn=None):
@@ -110,6 +88,7 @@ def getAuth(region, service, accessType, roleArn=None):
 
     return auth
 
+
 def manualLaunch():  # If not in a Lambda, launch main function and pass S3 event JSON
     lambda_handler({
         "Records": [
@@ -128,3 +107,4 @@ def manualLaunch():  # If not in a Lambda, launch main function and pass S3 even
 
 
 manualLaunch()
+
