@@ -57,7 +57,7 @@ def lambda_handler(event, context):
                 fileData = s3src.get_object(Bucket=bucketSrc, Key=keySrc)
                 s3dst.put_object(Bucket=bucketDst, Key=keyDst, Body=fileData['Body'].read())
                 
-                print('[COPYING] - FROM: s3://' + bucketSrc + 'TO: s3://' + bucketDst + '/' + keyDst)
+                print('[COPYING] - FROM: s3://' + bucketSrc + ' --> TO: s3://' + bucketDst + '/' + keyDst)
             
         except:
             pass
