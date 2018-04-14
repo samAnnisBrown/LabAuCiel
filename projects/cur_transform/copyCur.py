@@ -5,7 +5,8 @@ import json
 
 def lambda_handler(event, context):
     
-    # VARIABLES
+    # REPORT DETAILS
+
     bucketSrc = 'ansamual-costreports'
     prefix = 'QuickSight_RedShift'
     report = 'QuickSight_RedShift_CostReports'
@@ -33,7 +34,7 @@ def lambda_handler(event, context):
         s3dst = getS3Auth(region, 'client', None)
     
     if prefix == '':
-        keyPrefix = '/' + report + '/'
+        keyPrefix =  '/' + report + '/'
     else:
         keyPrefix = prefix + '/' + report + '/'
     
@@ -44,7 +45,6 @@ def lambda_handler(event, context):
     for prefix in objects['CommonPrefixes']:
         try:
             reportMonth = re.search(".+/(\d+)-", prefix['Prefix']).group(1)
-            # Load the month's manifest file to retrieve the latest file locations
             manifestLocation = prefix['Prefix'] + report + '-Manifest.json'
             manifestFile = s3src.get_object(Bucket=bucketSrc, Key=manifestLocation)
             manifestFileContents = manifestFile['Body'].read().decode('utf-8')
@@ -57,7 +57,8 @@ def lambda_handler(event, context):
                 fileData = s3src.get_object(Bucket=bucketSrc, Key=keySrc)
                 s3dst.put_object(Bucket=bucketDst, Key=keyDst, Body=fileData['Body'].read())
                 
-                print('[COPYING] - FROM: s3://' + bucketSrc + 'TO: s3://' + bucketDst + '/' + keyDst)
+                print('[COPYING] - FROM: s3://' + bucketSrc + ' --> TO: s3://' + bucketDst + '/' + keyDst)
+            
         except:
             pass
 
