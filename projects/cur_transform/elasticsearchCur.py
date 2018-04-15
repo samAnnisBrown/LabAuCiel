@@ -9,6 +9,7 @@ import urllib
 import time
 import os
 import elasticsearch
+from elasticsearch import helpers   # To interact with Elasticsearch
 
 # Global Variables
 totalLinesUploadedCount = 0     # Do not modify
@@ -142,7 +143,7 @@ def uploadToElasticsearch(actions, indexName):
     totalLinesUploadedCount += len(actions)
     percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
 
-    elasticsearch.helpers.bulk(es, actions)
+    helpers.bulk(es, actions)
     print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
 
 
