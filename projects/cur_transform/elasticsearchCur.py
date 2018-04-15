@@ -111,7 +111,7 @@ def lambda_handler(event, context):
                 payload = dict(zip(payloadKeys, payloadValuesOut))
 
                 # Create the required JSON for Elasticsearch upload
-                linesToUpload.append({"_index": indexName, "_type": "CostReport", "_source": payload})
+                linesToUpload.append({"_index": indexName, "_type": "doc", "_source": payload})
 
                 # If linesToUpload is > 250, complete a bulk upload
                 if len(linesToUpload) >= 1000:
@@ -131,10 +131,13 @@ def lambda_handler(event, context):
 def ToEs(doc, index):
     es = os.environ['esEndpoint']
     for item in doc:
+        payload = json.dumps(item + '\n').encode('utf8')
         print(item)
+        print(payload)
         time.sleep(2)
+
     global totalLinesUploadedCount
-    payload = json.dumps(doc).encode('utf8')
+    # payload = json.dumps(doc).encode('utf8')
     rq = urllib.request.Request(es + '/_bulk', payload, {'Content-Type': 'application/json'}, method='POST')
     try:
         f = urllib.request.urlopen(rq)
