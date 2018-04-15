@@ -131,7 +131,7 @@ def lambda_handler(event, context):
 def ToEs(doc, index):
     es = os.environ['esEndpoint']
     for item in doc:
-        payload = json.dumps(item + '\n').encode('utf8')
+        payload = json.dumps(item).encode('utf8') + '\n'
         print(item)
         print(payload)
         time.sleep(2)
