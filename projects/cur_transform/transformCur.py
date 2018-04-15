@@ -1,8 +1,8 @@
 import boto3
 import re
-from io import BytesIO
 import gzip
-import time
+import os
+import io
 
 
 def lambda_handler(event, context):
@@ -10,67 +10,63 @@ def lambda_handler(event, context):
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = event["Records"][0]["s3"]["object"]["key"]
     fileName = re.search(".+/(.+)\.", key).group(1)
-    yearMonth = re.search(".+/(\d+)/.+", key).group(1)
+    keyDate = re.search(".+/(\d+)/.+", key).group(1)
+    keyPrefix = re.search("(.+?)/", key).group(1)
+    bucketDst = os.environ['bucketDst']
 
     # Download S3 file
     s3 = getAuth('ap-southeast-2', 's3', 'client')
-    print('Downloading \"' + bucket + '/' + key + '\" from S3')
+    print('[DOWNLOADING] - ' + bucket + '/' + key + ' from S3.')
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
     # Unzip into memory
-    print('Unzipping into memory...')
-    bytestream = BytesIO(s3file['Body'].read())
+    print('[UNZIPPING] - into memory.')
+    bytestream = io.BytesIO(s3file['Body'].read())
     with gzip.open(bytestream, 'rt') as file:
-        print('Creating new zip')
-        file_buffer = BytesIO()
-        with gzip.GzipFile(fileobj=file_buffer, mode='w') as f:
-            for row in file.readlines():
-                if 'identity/LineItemId' in row:
-                    originalList = row.rstrip().split(',')
-                    uniqueList = []
+        print('[PROCESSING] - extracted CUR file.')
+        dailyFiles = {}
+        for row in file:
+            # Build the header row for each file
+            if 'identity/LineItemId' in row:
+                originalList = row.rstrip().split(',')
+                uniqueList = []
+                for index, item in enumerate(originalList):
+                    if item.lower() in uniqueList:
+                        originalList[index] = item + str(uniqueList.count(item.lower()))
+                        uniqueList.append(item.lower())
+                    else:
+                        uniqueList.append(item.lower())
 
-                    for index, item in enumerate(originalList):
-                        if item.lower() in uniqueList:
-                            originalList[index] = item + str(uniqueList.count(item.lower()))
-                            uniqueList.append(item.lower())
-                        else:
-                            uniqueList.append(item.lower())
+                header = ','.join(originalList) + '\n'
+            # Process each line to remove commas between quotes - also extract day for data partitioning
+            else:
+                day = re.search(".+?(\d+)-(\d+)-(\d+).*", row).group(3)
+                # Split on quotes
+                lineAsList = row.split('"')
+                # If index odd, the item is between quotes, so replace all commas with escaped commas
+                for i, part in enumerate(lineAsList):
+                    # Replace on odds only
+                    if i % 2 != 0:
+                        lineAsList[i] = part.replace(",", ".")
+                # Rejoin line as string
+                row = ''.join(lineAsList)
 
-                    row = ','.join(originalList) + '\n'
+                # Create a GZIP file for each day, ensuring a header row is in each
+                if day not in dailyFiles:
+                    dailyFiles[day] = io.BytesIO()
+                    globals()['gzip_' + day] = gzip.GzipFile(fileobj=dailyFiles[day], mode='w')
+                    globals()['gzip_' + day].write(header.encode('utf-8'))
                 else:
-                    #print(row)
-                    #year = re.search(".+?(\d+)-(\d+)-(\d+).*", row).group(1)
-                    #month = re.search(".+?(\d+)-(\d+)-(\d+).*", row).group(2)
-                    #day = re.search(".+?(\d+)-(\d+)-(\d+).*", row).group(3)
+                    globals()['gzip_' + day].write(row.encode('utf-8'))
 
-                    #print(year)
-                    #print(month)
-                    #print(day)
-                    # Split on quotes
+    for k, v in dailyFiles.items():
+        globals()['gzip_' + k].close()
+        v.seek(0)
+        # Put the object in S3
+        uploadKey = keyPrefix + '/year=' + keyDate[0:4] + '/month=' + keyDate[4:6] + '/day=' + k + '/' + fileName + '.gz'
+        print('[UPLOADING] - transformed CSV to S3 - ' + uploadKey.lower())
+        s3.put_object(Bucket=bucketDst, Key=uploadKey.lower(), Body=v)
 
-                    lineAsList = row.split('"')
-                    # If index odd, the item is between quotes, so replace all commas with escaped commas
-                    for i, part in enumerate(lineAsList):
-                        # Replace on odds only
-                        if i % 2 != 0:
-                            lineAsList[i] = part.replace(",", ".")
-                    # Rejoin line as string
-                    row = ''.join(lineAsList)
-                    #print(row)
-                    #time.sleep(1)
-                f.write(row.encode('utf-8'))
-
-    file_buffer.seek(0)
-    # Put the object in S3
-    uploadKey = 'rmit' + '/year=' + yearMonth[0:4] + '/month=' + yearMonth[4:6] + '/' + fileName + '.gz'
-    print('Uploading unzipped and transformed CSV to ' + uploadKey.lower())
-    s3.put_object(Bucket='ansamual-cur-transformed', Key=uploadKey.lower(), Body=file_buffer)
-
-
-def create_file(row, day):
-    file_buffer = BytesIO()
-    with gzip.GzipFile(fileobj=file_buffer, mode='w') as f:
-        f.write(row.encode('utf-8'))
 
 def getAuth(region, service, accessType, roleArn=None):
     if roleArn is not None:
@@ -114,13 +110,17 @@ def manualLaunch():  # If not in a Lambda, launch main function and pass S3 even
                         "name": 'ansamual-cur-clean',
                     },
                     "object": {
-                        "key": 'ansamual-costreports/20180401/QuickSight_RedShift_CostReports-1.csv.gz',
+                        "key": 'rmit-billing-reports/20180301/Hourly-report-4.csv.gz',
                     }
                 }
             }
         ]
     }, None)
 
+os.environ['bucketDst'] = 'ansamual-cur-transformed'
 
 manualLaunch()
+
+# rmit-billing-reports/20180301/Hourly-report-4.csv.gz
+# ansamual-costreports/20180401/QuickSight_RedShift_CostReports-1.csv.gz
 
