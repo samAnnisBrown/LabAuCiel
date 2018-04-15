@@ -12,6 +12,7 @@ from elasticsearch import helpers   # To interact with Elasticsearch
 # Global Variables
 totalLinesUploadedCount = 0     # Do not modify
 totalLinesCount = 0             # Do not modify
+startTime = time.time()         # Do not modify
 
 
 def lambda_handler(event, context):
@@ -24,9 +25,8 @@ def lambda_handler(event, context):
     fileName = re.search("(.+?)/", key).group(1)
     year = re.search("year.+?(\d{4})", key).group(1)
     month = re.search("month.+?(\d{2})", key).group(1)
-    day = re.search("day.+?(\d{2})", key).group(1)
 
-    indexName = 'cur-' + fileName + '-' + year + month + day
+    indexName = 'cur-' + fileName + '-' + year + month
 
     # Download S3 file
     s3 = getAuth('ap-southeast-2', 's3', 'client')
@@ -123,7 +123,7 @@ def lambda_handler(event, context):
     if len(linesToUpload) > 0:
         uploadToElasticsearch(linesToUpload, indexName)
 
-    # Final Cleanup
+    # Final Cleanups
     global totalLinesUploadedCount
     totalLinesUploadedCount = 0
 
@@ -137,7 +137,8 @@ def uploadToElasticsearch(actions, indexName):
     percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
 
     helpers.bulk(es, actions)
-    print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
+    currentRunTime = time.time() - startTime
+    print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%) - Runtime = " + str(currentRunTime) + 's', end='\r')
 
 
 # Return ES auth, depending on whether it's in a Lambda function or not
