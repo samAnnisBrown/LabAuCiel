@@ -115,7 +115,7 @@ def lambda_handler(event, context):
                 linesToUpload.append({"_index": indexName, "_type": "doc", "_source": payload})
 
                 # If linesToUpload is > 250, complete a bulk upload
-                if len(linesToUpload) >= 5:
+                if len(linesToUpload) >= 3:
                     ToEs(linesToUpload, indexName)
                     linesToUpload = []
 
@@ -140,8 +140,8 @@ def ToEs(doc, index):
 
     global totalLinesUploadedCount
     # payload = json.dumps(doc).encode('utf8')
-    payload = payload
-    #print(payload)
+    #payload = payload
+    print(payload)
     rq = urllib.request.Request(es + '/_bulk', data=payload, headers={'Content-Type': 'application/x-ndjson'}, method='POST')
     try:
         f = urllib.request.urlopen(rq)
