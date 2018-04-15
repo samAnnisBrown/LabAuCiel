@@ -124,6 +124,7 @@ def lambda_handler(event, context):
         uploadToElasticsearch(linesToUpload, indexName)
 
     # Final Cleanups
+    print('')
     global totalLinesUploadedCount
     totalLinesUploadedCount = 0
 
