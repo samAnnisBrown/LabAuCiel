@@ -138,7 +138,7 @@ def uploadToElasticsearch(actions, indexName):
 
     helpers.bulk(es, actions)
     currentRunTime = time.time() - startTime
-    print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%) - Runtime = " + str(currentRunTime) + 's', end='\r')
+    print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%) - Runtime = " + str(round(currentRunTime, 2)) + 's', end='\r')
 
 
 # Return ES auth, depending on whether it's in a Lambda function or not
