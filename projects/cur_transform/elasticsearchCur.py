@@ -139,6 +139,7 @@ def ToEs(doc, index):
 
     global totalLinesUploadedCount
     # payload = json.dumps(doc).encode('utf8')
+    payload = payload.encode('utf-8')
     rq = urllib.request.Request(es + '/_bulk', payload, {'Content-Type': 'application/json'}, method='POST')
     try:
         f = urllib.request.urlopen(rq)
