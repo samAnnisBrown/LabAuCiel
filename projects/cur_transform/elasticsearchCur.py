@@ -114,8 +114,8 @@ def lambda_handler(event, context):
                 # Create the required JSON for Elasticsearch upload
                 linesToUpload.append({"_index": indexName, "_id": docId, "_type": "cur_doc", "_source": payload})
 
-                # If linesToUpload is > 250, complete a bulk upload
-                if len(linesToUpload) >= 1000:
+                # If linesToUpload is > 5000, complete a bulk upload
+                if len(linesToUpload) >= 5000:
                     uploadToElasticsearch(linesToUpload, indexName)
                     linesToUpload = []
 
