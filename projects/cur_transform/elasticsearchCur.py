@@ -142,6 +142,7 @@ def ToEs(doc, index):
         print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + index + ". (" + str(percent) + "%)", end='\r')
     except urllib.error.HTTPError:
         rsp = 'Error uploading ' + str(doc)
+        print('ERROR')
 
 
 def getAuth(region, service, accessType, roleArn=None):
