@@ -132,7 +132,7 @@ def ToEs(doc, index):
     es = os.environ['esEndpoint']
     global totalLinesUploadedCount
     payload = json.dumps(doc).encode('utf8')
-    rq = urllib.request.Request(es + '/_bulk', payload, {'Content-Type': 'application/x-ndjson'}, method='POST')
+    rq = urllib.request.Request(es + '/_bulk', payload, {'Content-Type': 'application/json'}, method='POST')
     try:
         f = urllib.request.urlopen(rq)
         rsp = f.read()
@@ -140,9 +140,9 @@ def ToEs(doc, index):
         totalLinesUploadedCount += len(doc)
         percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
         print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + index + ". (" + str(percent) + "%)", end='\r')
-    except urllib.error.HTTPError:
-        rsp = 'Error uploading ' + str(doc)
-        print('ERROR')
+    except Exception as e:
+        rsp = 'Error uploading ' + str(e)
+        print(rsp)
 
 
 def getAuth(region, service, accessType, roleArn=None):
