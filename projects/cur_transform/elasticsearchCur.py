@@ -130,6 +130,9 @@ def lambda_handler(event, context):
 
 def ToEs(doc, index):
     es = os.environ['esEndpoint']
+    for item in doc:
+        print(item)
+        time.sleep(2)
     global totalLinesUploadedCount
     payload = json.dumps(doc).encode('utf8')
     rq = urllib.request.Request(es + '/_bulk', payload, {'Content-Type': 'application/json'}, method='POST')
