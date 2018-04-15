@@ -1,13 +1,11 @@
-import sys
 import re
 import boto3
 import io
 import gzip
 import csv
-import json
-import urllib
 import time
 import os
+import hashlib
 import elasticsearch
 from elasticsearch import helpers   # To interact with Elasticsearch
 
@@ -21,19 +19,14 @@ def lambda_handler(event, context):
 
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = event["Records"][0]["s3"]["object"]["key"]
+    key = key.replace('%3D', '=')
 
     fileName = re.search("(.+?)/", key).group(1)
     year = re.search("year.+?(\d{4})", key).group(1)
     month = re.search("month.+?(\d{2})", key).group(1)
     day = re.search("day.+?(\d{2})", key).group(1)
 
-
-    print(year)
-    print(month)
-    print(day)
-
     indexName = 'cur-' + fileName + '-' + year + month + day
-    print(indexName)
 
     # Download S3 file
     s3 = getAuth('ap-southeast-2', 's3', 'client')
@@ -116,9 +109,10 @@ def lambda_handler(event, context):
             else:
                 # Create the individual line payload
                 payload = dict(zip(payloadKeys, payloadValuesOut))
+                docId = hashlib.md5(str(payloadValuesOut[0] + payloadValuesOut[1]).encode('utf-8')).hexdigest()
 
                 # Create the required JSON for Elasticsearch upload
-                linesToUpload.append({"_index": indexName, "_type": "cur_doc", "_source": payload})
+                linesToUpload.append({"_index": indexName, "_id": docId, "_type": "cur_doc", "_source": payload})
 
                 # If linesToUpload is > 250, complete a bulk upload
                 if len(linesToUpload) >= 1000:
@@ -130,7 +124,6 @@ def lambda_handler(event, context):
         uploadToElasticsearch(linesToUpload, indexName)
 
     # Final Cleanup
-    print("")
     global totalLinesUploadedCount
     totalLinesUploadedCount = 0
 

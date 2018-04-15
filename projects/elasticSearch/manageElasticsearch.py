@@ -20,3 +20,19 @@ def listIndex(esEndpoint):
     print(response.text)
     print('[LISTING] - Indices')
     sys.exit()
+
+
+# Delete the specified ES index
+def deleteElasticsearchIndex(indexName):
+    print('[--DELETING--] - Index ' + indexName)
+    es = returnElasticsearchAuth()
+    es.indices.delete(index=indexName, ignore=[400, 404])
+
+
+# Return ES auth, depending on whether it's in a Lambda function or not
+def returnElasticsearchAuth():
+    es = Elasticsearch(host=args.elasticsearch_endpoint,
+                       port=80,
+                       connection_class=RequestsHttpConnection)
+
+    return es
