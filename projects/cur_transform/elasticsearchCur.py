@@ -133,7 +133,7 @@ def ToEs(doc, index):
     es = os.environ['esEndpoint']
     payload = ''
     for item in doc:
-        payload += json.dumps(item) + ',\n'
+        payload += json.dumps(item) + '\n'
         # print(item)
         # print(payload)
         # time.sleep(2)
@@ -142,7 +142,7 @@ def ToEs(doc, index):
     # payload = json.dumps(doc).encode('utf8')
     payload = payload.encode('utf-8')
     print(payload)
-    rq = urllib.request.Request(es + '/_bulk', data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+    rq = urllib.request.Request(es + '/_bulk', data=payload, headers={'Content-Type': 'application/x-ndjson'}, method='POST')
     try:
         f = urllib.request.urlopen(rq)
         rsp = f.read()
