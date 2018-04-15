@@ -1,3 +1,4 @@
+import sys
 import re
 import boto3
 import io
@@ -114,7 +115,7 @@ def lambda_handler(event, context):
                 linesToUpload.append({"_index": indexName, "_type": "doc", "_source": payload})
 
                 # If linesToUpload is > 250, complete a bulk upload
-                if len(linesToUpload) >= 1000:
+                if len(linesToUpload) >= 5:
                     ToEs(linesToUpload, indexName)
                     linesToUpload = []
 
@@ -140,6 +141,7 @@ def ToEs(doc, index):
     global totalLinesUploadedCount
     # payload = json.dumps(doc).encode('utf8')
     payload = payload.encode('utf-8')
+    print(payload)
     rq = urllib.request.Request(es + '/_bulk', data=payload, headers={'Content-Type': 'application/json'}, method='POST')
     try:
         f = urllib.request.urlopen(rq)
@@ -151,6 +153,8 @@ def ToEs(doc, index):
     except Exception as e:
         rsp = 'Error uploading ' + str(e)
         print(rsp)
+
+    sys.exit()
 
 
 def getAuth(region, service, accessType, roleArn=None):
