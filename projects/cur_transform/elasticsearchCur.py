@@ -10,6 +10,10 @@ import time
 import os
 import elasticsearch
 
+# Global Variables
+totalLinesUploadedCount = 0     # Do not modify
+totalLinesCount = 0             # Do not modify
+
 
 def lambda_handler(event, context):
     time.sleep(1)
@@ -146,8 +150,8 @@ def uploadToElasticsearch(actions, indexName):
 def returnElasticsearchAuth():
     esEndpoint = os.environ['esEndpoint']
     es = elasticsearch.Elasticsearch(host=esEndpoint,
-                       port=80,
-                       connection_class=elasticsearch.RequestsHttpConnection)
+                                     port=80,
+                                     connection_class=elasticsearch.RequestsHttpConnection)
 
     return es
 
