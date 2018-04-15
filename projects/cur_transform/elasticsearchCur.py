@@ -132,7 +132,7 @@ def ToEs(doc, index):
     es = os.environ['esEndpoint']
     payload = ''
     for item in doc:
-        payload += json.dumps(item) + '\n'
+        payload += json.dumps(item) + ',\n'
         # print(item)
         # print(payload)
         # time.sleep(2)
