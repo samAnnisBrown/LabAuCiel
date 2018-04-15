@@ -124,9 +124,9 @@ def lambda_handler(event, context):
         uploadToElasticsearch(linesToUpload, indexName)
 
     # Final Cleanups
-    print('')
+    print('')                       # Makes it nicer when running from CLI
     global totalLinesUploadedCount
-    totalLinesUploadedCount = 0
+    totalLinesUploadedCount = 0     # Reset count to 0 for next invocation
 
 
 # Handles the uploading of files to the Elasticsearch endpoint, and printing upload details
