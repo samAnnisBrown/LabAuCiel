@@ -133,9 +133,9 @@ def ToEs(doc, index):
     payload = ''
     for item in doc:
         payload += json.dumps(item) + '\n'
-        print(item)
-        print(payload)
-        time.sleep(2)
+        # print(item)
+        # print(payload)
+        # time.sleep(2)
 
     global totalLinesUploadedCount
     # payload = json.dumps(doc).encode('utf8')
