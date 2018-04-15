@@ -8,6 +8,7 @@ import json
 import urllib
 import time
 import os
+import elasticsearch
 
 
 def lambda_handler(event, context):
@@ -112,17 +113,16 @@ def lambda_handler(event, context):
                 payload = dict(zip(payloadKeys, payloadValuesOut))
 
                 # Create the required JSON for Elasticsearch upload
-                #linesToUpload.append({"_index": indexName, "_type": "doc", "_source": payload})
-                linesToUpload.append(payload)
+                linesToUpload.append({"_index": indexName, "_type": "cur_doc", "_source": payload})
 
                 # If linesToUpload is > 250, complete a bulk upload
-                if len(linesToUpload) >= 3:
-                    ToEs(linesToUpload, indexName)
+                if len(linesToUpload) >= 1000:
+                    uploadToElasticsearch(linesToUpload, indexName)
                     linesToUpload = []
 
     # If there are any lines left once loop is completed, upload them.
     if len(linesToUpload) > 0:
-        ToEs(linesToUpload, indexName)
+        uploadToElasticsearch(linesToUpload, indexName)
 
     # Final Cleanup
     print("")
@@ -130,32 +130,26 @@ def lambda_handler(event, context):
     totalLinesUploadedCount = 0
 
 
-def ToEs(doc, index):
-    es = os.environ['esEndpoint']
-    payload = ''
-    for item in doc:
-        payload += json.dumps({"index": {"_index": index, "_type": "doc"}}) + '\n'
-        payload += json.dumps(item) + '\n'
-        # print(item)
-        # print(payload)
-        # time.sleep(2)
-
+# Handles the uploading of files to the Elasticsearch endpoint, and printing upload details
+def uploadToElasticsearch(actions, indexName):
     global totalLinesUploadedCount
-    payload = json.dumps(payload).encode('utf8')
-    #payload = payload
-    rq = urllib.request.Request(es + '/_bulk', data=payload, headers={'Content-Type': 'application/json'}, method='POST')
-    try:
-        f = urllib.request.urlopen(rq)
-        rsp = f.read()
-        f.close()
-        totalLinesUploadedCount += len(doc)
-        percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
-        print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + index + ". (" + str(percent) + "%)", end='\r')
-    except Exception as e:
-        rsp = 'Error uploading ' + str(e)
-        print(rsp)
 
-    sys.exit()
+    es = returnElasticsearchAuth()
+    totalLinesUploadedCount += len(actions)
+    percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
+
+    elasticsearch.helpers.bulk(es, actions)
+    print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%)", end='\r')
+
+
+# Return ES auth, depending on whether it's in a Lambda function or not
+def returnElasticsearchAuth():
+    esEndpoint = os.environ['esEndpoint']
+    es = elasticsearch.Elasticsearch(host=esEndpoint,
+                       port=80,
+                       connection_class=elasticsearch.RequestsHttpConnection)
+
+    return es
 
 
 def getAuth(region, service, accessType, roleArn=None):
