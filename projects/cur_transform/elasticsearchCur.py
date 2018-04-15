@@ -190,7 +190,7 @@ def getAuth(region, service, accessType, roleArn=None):
     return auth
 
 
-os.environ['esEndpoint'] = 'http://vpc-wildwest-gw7tbux4h6vom3xqucxpqqusre.ap-southeast-2.es.amazonaws.com'
+os.environ['esEndpoint'] = 'vpc-wildwest-gw7tbux4h6vom3xqucxpqqusre.ap-southeast-2.es.amazonaws.com'
 
 def manualLaunch():  # If not in a Lambda, launch main function and pass S3 event JSON
     lambda_handler({
