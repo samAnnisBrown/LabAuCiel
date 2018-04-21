@@ -5,6 +5,9 @@ import os
 import io
 import csv
 import json
+import time
+
+startTime = time.time()         # Do not modify
 
 
 def lambda_handler(event, context):
@@ -23,6 +26,7 @@ def lambda_handler(event, context):
         # Unzip into memory
         print('[UNZIPPING] - into memory.')
         bytestream = io.BytesIO(s3file['Body'].read())
+        dying =False
         with gzip.open(bytestream, 'rt') as file:
             print('[PROCESSING] - extracted CUR file.')
             filesDict = {}
@@ -32,6 +36,11 @@ def lambda_handler(event, context):
                     header = buildHeaderRow(row, False)
                     hasHeader = False
                 else:
+                    currentRunTime = time.time() - startTime
+                    if currentRunTime > 245 and dying is False:
+                        print('About to die: ' + keySrc + ' - daily file')
+                        dying = True
+
                     fileIndex = re.search(".+?(\d+)-(\d+)-(\d+).*", row).group(3)   # day
                     # Create a GZIP file for each day, ensuring a header row is in each
                     if fileIndex not in filesDict:
@@ -58,11 +67,16 @@ def lambda_handler(event, context):
         # Unzip into memory
         print('[UNZIPPING] - into memory.')
         bytestream = io.BytesIO(s3file['Body'].read())
+        dying =False
         with gzip.open(bytestream, 'rt') as file:
             print('[PROCESSING] - extracted CUR file.')
             filesDict = {}
             hasHeader = True
             for row in file:
+                currentRunTime = time.time() - startTime
+                if currentRunTime > 245 and dying is False:
+                    print('About to die: ' + keySrc + ' - json file')
+                    dying = True
                 # Build the header row for each file
                 if hasHeader:
                     header = buildHeaderRow(row, True)
