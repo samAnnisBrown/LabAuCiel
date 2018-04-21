@@ -3,6 +3,8 @@ import re
 import gzip
 import os
 import io
+import csv
+import json
 
 
 def lambda_handler(event, context):
@@ -11,12 +13,11 @@ def lambda_handler(event, context):
     keySrc = event["Records"][0]["s3"]["object"]["key"]
     keySrc = keySrc.replace('%3D', '=')
     bucketDst = os.environ['bucketDst']
-    fileName = re.search(".+/(.+)", keySrc).group(1)
+    fileName = re.search(".+/(.+?)\.", keySrc).group(1)
     keyPrefix = re.search("(.+?)/.*", keySrc).group(1)
 
-    if 'month=' not in keySrc:
+    if 'scratch' not in keySrc:
         keyDate = re.search(".+/(\d+)/.+", keySrc).group(1)
-
         s3file = getS3FObject(bucketSrc, keySrc)
 
         # Unzip into memory
@@ -25,17 +26,15 @@ def lambda_handler(event, context):
         with gzip.open(bytestream, 'rt') as file:
             print('[PROCESSING] - extracted CUR file.')
             filesDict = {}
+            hasHeader = True
             for row in file:
-                # Build the header row for each file
-                if 'identity/LineItemId' in row:
-                    header = buildHeaderRow(row)
-                # Process each line to remove commas between quotes - also extract day for data partitioning
+                if hasHeader:
+                    header = buildHeaderRow(row, False)
+                    hasHeader = False
                 else:
-                    row = replaceCommasBetweenQuotes(row)
-                    day = re.search(".+?(\d+)-(\d+)-(\d+).*", row).group(3)
+                    fileIndex = re.search(".+?(\d+)-(\d+)-(\d+).*", row).group(3)   # day
                     # Create a GZIP file for each day, ensuring a header row is in each
-                    fileIndex = day
-                    if day not in filesDict:
+                    if fileIndex not in filesDict:
                         filesDict[fileIndex] = io.BytesIO()
                         globals()['gzip_' + str(fileIndex)] = gzip.GzipFile(fileobj=filesDict[fileIndex], mode='w')
                         globals()['gzip_' + str(fileIndex)].write(header.encode('utf-8'))
@@ -46,7 +45,7 @@ def lambda_handler(event, context):
             globals()['gzip_' + k].close()
             v.seek(0)
             # Put the object in S3
-            uploadKey = keyPrefix + '/scratch/year=' + keyDate[0:4] + '/month=' + keyDate[4:6] + '/day=' + k + '/' + fileName
+            uploadKey = keyPrefix + '/scratch/year=' + keyDate[0:4] + '/month=' + keyDate[4:6] + '/day=' + k + '/' + fileName + ".csv.gz"
             putS3Object(bucketSrc, uploadKey, v)
     else:
         year = re.search(".+year=(\d{4})", keySrc).group(1)
@@ -62,31 +61,46 @@ def lambda_handler(event, context):
         with gzip.open(bytestream, 'rt') as file:
             print('[PROCESSING] - extracted CUR file.')
             filesDict = {}
+            hasHeader = True
             for row in file:
                 # Build the header row for each file
-                if 'identity/LineItemId' in row:
-                    header = buildHeaderRow(row)
+                if hasHeader:
+                    header = buildHeaderRow(row, True)
+                    hasHeader = False
                 # Process each line to remove commas between quotes - also extract day for data partitioning
                 else:
-                    hour = re.search("(.+?,){9}.+?T(\d{2}).+", row).group(2)
+                    csvList = list(csv.reader(row.split('\n'), quotechar='"'))[0]
+
                     # Create a GZIP file for each day, ensuring a header row is in each
-                    fileIndex = hour
-                    if hour not in filesDict:
+                    for k, v in enumerate(csvList):
+                        if v == '':
+                            csvList[k] = None
+                        else:
+                            try:
+                                csvList[k] = float(v)
+                                try:
+                                    csvList[k] = int(v)
+                                except:
+                                    pass
+                            except:
+                                pass
+                    payload = dict(zip(header, csvList))
+                    fileIndex = day
+                    if fileIndex not in filesDict:
                         filesDict[fileIndex] = io.BytesIO()
                         globals()['gzip_' + str(fileIndex)] = gzip.GzipFile(fileobj=filesDict[fileIndex], mode='w')
-                        globals()['gzip_' + str(fileIndex)].write(header.encode('utf-8'))
                     else:
-                        globals()['gzip_' + str(fileIndex)].write(row.encode('utf-8'))
+                        globals()['gzip_' + str(fileIndex)].write(str(json.dumps(payload) + '\n').encode('utf-8'))
 
         for k, v in filesDict.items():
             globals()['gzip_' + k].close()
             v.seek(0)
             # Put the object in S3
-            uploadKey = keyPrefix + '/year=' + year + '/month=' + month + '/day=' + day + '/hour=' + k + '/' + fileName
+            uploadKey = keyPrefix + '/year=' + year + '/month=' + month + '/day=' + k + '/' + fileName + ".json.gz"
             putS3Object(bucketDst, uploadKey, v)
 
 
-def buildHeaderRow(row):
+def buildHeaderRow(row, asList):
     originalList = row.rstrip().split(',')
     uniqueList = []
     for index, item in enumerate(originalList):
@@ -96,7 +110,10 @@ def buildHeaderRow(row):
         else:
             uniqueList.append(item.lower())
 
-    header = ','.join(originalList) + '\n'
+    if asList:
+        header = originalList
+    else:
+        header = ','.join(originalList) + '\n'
 
     return header
 
@@ -178,7 +195,9 @@ def manualLaunch():  # If not in a Lambda, launch main function and pass S3 even
                     },
                     "object": {
                         #"key": 'ansamual-costreports/20180401/QuickSight_RedShift_CostReports-1.csv.gz',
-                        "key": 'ansamual-costreports/year=2018/month=04/day=01/quicksight_redshift_costreports-1.csv.gz',
+                        #"key": 'rmit-billing-reports/20180301/Hourly-report-4.csv.gz',
+                        "key": 'rmit-billing-reports/scratch/year=2018/month=03/day=13/hourly-report-4.csv.gz',
+                        #"key": 'ansamual-costreports/scratch/year=2018/month=04/day=01/quicksight_redshift_costreports-1.csv.gz',
                     }
                 }
             }
