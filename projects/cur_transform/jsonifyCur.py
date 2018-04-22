@@ -29,16 +29,30 @@ def lambda_handler(event, context):
         print('[PROCESSING] - Jsonifying CUR part.')
         filesDict = {}
         hasHeader = True
+        forcStringIndex = []
         for row in file:
             if hasHeader:
                 header = buildHeaderRow(row)
                 hasHeader = False
+                # Some columns have multiple data types (i.e. int and str) force string if we don't need math
+                forceString = ['product/ecu',
+                               'product/maxIopsvolume',
+                               'product/normalizationSizeFactor',
+                               'bill/InvoiceId',
+                               'bill/PayerAccountId',
+                               'lineItem/UsageAccountId']
+
+                for index, value in enumerate(header):
+                    if value in forceString:
+                        forcStringIndex.append(index)
             else:
                 csvList = list(csv.reader(row.split('\n'), quotechar='"'))[0]
                 # Create a GZIP file for each day, ensuring a header row is in each
                 for k, v in enumerate(csvList):
                     if v == '':
                         csvList[k] = None
+                    elif k in forcStringIndex:
+                        pass
                     else:
                         try:
                             csvList[k] = float(v)
@@ -114,8 +128,8 @@ def manualLaunch():  # If not in a Lambda, launch main function and pass S3 even
                     "object": {
                         #"key": 'ansamual-costreports/20180401/QuickSight_RedShift_CostReports-1.csv.gz',
                         #"key": 'rmit-billing-reports/20180301/Hourly-report-4.csv.gz',
-                        "key": 'rmit-billing-reports/scratch/year=2018/month=03/day=13/hourly-report-4.csv.gz',
-                        #"key": 'ansamual-costreports/scratch/year=2018/month=04/day=01/quicksight_redshift_costreports-1.csv.gz',
+                        #"key": 'rmit-billing-reports/scratch/year=2018/month=03/day=13/hourly-report-4.csv.gz',
+                        "key": 'ansamual-costreports/scratch/year=2018/month=04/day=01/quicksight_redshift_costreports-1.tmp.gz',
                     }
                 }
             }
