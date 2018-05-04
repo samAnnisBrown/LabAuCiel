@@ -197,3 +197,5 @@ Outputs:
   AMI:
     Description: AMI created for backup
     Value: !GetAtt CustomCreateSnap.AmiId
+    Export:
+      Name: !Sub "${AWS::StackName}-AmiId"

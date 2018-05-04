@@ -3,29 +3,30 @@ import re
 import json
 import os
 
-
-# This function should always be run from the same account that contains the dst bucket
+# This function must be run from the account that contains the dst bucket
 # If the src bucket is in different account, provide the ARN of a role that has permission to assume role into the src account and retreive the CUR files
 def lambda_handler(event, context):
 
     # Retrieve Variables from Environment
-    bucketSrc = os.environ['bucketSrc']
-    bucketDst = os.environ['bucketDst']
-    report = os.environ['report']
-    prefix = os.environ['prefix']
-    region = os.environ['region']
-    roleArn = os.environ['roleArn']
+    try:
+        bucketSrc = os.environ['bucketSrc']
+        bucketDst = os.environ['bucketDst']
+        report = os.environ['report']
+        prefix = os.environ['prefix']
+        region = os.environ['region']
+        roleArn = os.environ['roleArn']
+    except:
+        pass
 
-    # If roleArn is set, but blank, then assume src and dst buckets are in the same account, an retrieve auth appropriately
-    if roleArn == '':
-        s3ClientSrc = getAuth(region, 's3', 'client')
-        s3ClientDst = s3ClientSrc
+    # If roleArn is not set, use local account auth.
+    if roleArn not in locals():
+        s3ClientSrc = s3ClientDst = getClientAuth(region, 's3')
     # Else us STS to access bucket in src account.
     else:
-        s3ClientSrc = getAuth(region, 's3', 'client', roleArn)
-        s3ClientDst = getAuth(region, 's3', 'client')
+        s3ClientSrc = getClientAuth(region, 's3', roleArn)
+        s3ClientDst = getClientAuth(region, 's3')
 
-    # Build the key prefix based on variables provided.
+    # Build the key prefix.
     keyPrefix = '/' + report + '/'
     if prefix != '':
         keyPrefix = prefix + keyPrefix
@@ -37,19 +38,16 @@ def lambda_handler(event, context):
 
     for prefix in objects['CommonPrefixes']:
         try:
-            reportMonth = re.search(".+/(\d+)-", prefix['Prefix']).group(1)
-            # Retrieve and load the month's manifest file so we can get the latest file locations.
-            manifestLocation = prefix['Prefix'] + report + '-Manifest.json'
-            manifestFile = s3ClientSrc.get_object(Bucket=bucketSrc, Key=manifestLocation)
-            manifestFileContents = manifestFile['Body'].read().decode('utf-8')
-            manifestJsonContents = json.loads(manifestFileContents)
+            reportMonth = re.search(".+/(\d+)-", prefix['Prefix']).group(1)                                             # Regex to get month of CUR
+            manifestFile = s3ClientSrc.get_object(Bucket=bucketSrc, Key=prefix['Prefix'] + report + '-Manifest.json')   # Get Manifest File
+            manifestJsonContents = json.loads(manifestFile['Body'].read().decode('utf-8'))                              # Read Manifest File Contents
 
             # For each file in the manifest...
             for keySrc in manifestJsonContents['reportKeys']:
                 # Build some variables.
-                objectName = re.search(".+/(.*)", keySrc).group(1)
-                keyDst = bucketSrc + '/' + reportMonth + '/' + objectName
-                # Save us some $$$ by checking if the file's already been copied.
+                fileName = re.search(".+/(.*)", keySrc).group(1)
+                keyDst = bucketSrc + '/' + reportMonth + '/' + fileName 
+                # Check if the file's already been copied.
                 lengthSrc = s3ClientSrc.head_object(Bucket=bucketSrc, Key=keySrc)['ResponseMetadata']['HTTPHeaders']['content-length']
                 try:
                     lengthDst = s3ClientDst.head_object(Bucket=bucketDst, Key=keyDst)['ResponseMetadata']['HTTPHeaders']['content-length']
@@ -70,7 +68,7 @@ def lambda_handler(event, context):
 
 
 # Generic S3 auth function - return client or resource auth using either BOTO3 logic, or assume-role if ARN supplied.
-def getAuth(region, service, accessType, roleArn=None):
+def getClientAuth(region, service, roleArn=None):
     if roleArn is not None:
         client = boto3.client('sts')
         assumed_role = client.assume_role(
@@ -80,25 +78,14 @@ def getAuth(region, service, accessType, roleArn=None):
 
         creds = assumed_role['Credentials']
 
-        if accessType == 'client':
-            auth = boto3.client(service,
-                                region_name=region,
-                                aws_access_key_id=creds['AccessKeyId'],
-                                aws_secret_access_key=creds['SecretAccessKey'],
-                                aws_session_token=creds['SessionToken'])
+        auth = boto3.client(service,
+                            region_name=region,
+                            aws_access_key_id=creds['AccessKeyId'],
+                            aws_secret_access_key=creds['SecretAccessKey'],
+                            aws_session_token=creds['SessionToken'])
         
-        elif accessType == 'resource':
-            auth = boto3.resource(service,
-                                  region_name=region,
-                                  aws_access_key_id=creds['AccessKeyId'],
-                                  aws_secret_access_key=creds['SecretAccessKey'],
-                                  aws_session_token=creds['SessionToken'])
     else:
-        if accessType == 'client':
-            auth = boto3.client(service, region_name=region)
-        
-        elif accessType == 'resource':
-            auth = boto3.resource(service, region_name=region)
+        auth = boto3.client(service, region_name=region)
 
     return auth
 
