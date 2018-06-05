@@ -9,18 +9,15 @@ import hashlib
 import elasticsearch
 from elasticsearch import helpers   # To interact with Elasticsearch
 
-# Global Variables
 totalLinesUploadedCount = 0     # Do not modify
-totalLinesCount = 0             # Do not modify
+startTime = time.time()         # Do not modify
 
 
 def lambda_handler(event, context):
-    startTime = time.time()         # Do not modify
-    time.sleep(1)
+    time.sleep(0.25)
 
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
-    key = event["Records"][0]["s3"]["object"]["key"]
-    key = key.replace('%3D', '=')
+    key = event["Records"][0]["s3"]["object"]["key"].replace('%3D', '=')
 
     fileName = re.search("(.+?)/", key).group(1)
     year = re.search("year.+?(\d{4})", key).group(1)
@@ -33,59 +30,59 @@ def lambda_handler(event, context):
     print('[DOWNLOADING] - s3://' + bucket + '/' + key)
     s3file = s3.get_object(Bucket=bucket, Key=key)
 
-    # Unzip into memory
-    print('[UNZIPPING] - into memory.')
-    bytestream = io.BytesIO(s3file['Body'].read())
-    outfile = gzip.GzipFile(None, 'rb', fileobj=bytestream).read().decode('utf-8')
-
     # Prepare variables
     linesToUpload = []
-    global totalLinesCount
-    totalLinesCount = len(outfile.splitlines())
-
-    # Parse and upload file contents
-    for count, line in enumerate(outfile.splitlines()):
-        # Convert floats to numbers in the output JSON
-        payload = json.loads(line)
-        payloadkeys = []
-        payloadvalues = []
-        for key, value in payload.items():
-            key = key.replace('/', '_')
-            key = key.replace(':', '_')
-            payloadkeys.append(key)
-            payloadvalues.append(value)
-
-        payload = dict(zip(payloadkeys, payloadvalues))
-        docId = hashlib.md5(str(payload['identity_LineItemId'] + payload['identity_TimeInterval']).encode('utf-8')).hexdigest()
-        # Create the required JSON for Elasticsearch upload
-        linesToUpload.append({"_index": indexName, "_id": docId, "_type": "cur_doc", "_source": json.dumps(payload)})
-
-        # If linesToUpload is > 5000, complete a bulk upload
-        if len(linesToUpload) >= 5000:
+    print('[UNCOMPRESSING] - As bytestream...')
+    bytestream = io.BytesIO(s3file['Body'].read())
+    with gzip.open(bytestream, 'rt') as file:
+        for line in file:
+            # Convert floats to numbers in the output JSON
+            payload = json.loads(line)
+            payloadkeys = []
+            payloadvalues = []
+            for key, value in payload.items():
+                key = key.replace('/', '_')
+                key = key.replace(':', '_')
+                payloadkeys.append(key)
+                payloadvalues.append(value)
+        
+            payload = dict(zip(payloadkeys, payloadvalues))
+            docId = hashlib.md5(str(payload['identity_LineItemId'] + payload['identity_TimeInterval']).encode('utf-8')).hexdigest()
+            # Create the required JSON for Elasticsearch upload
+            linesToUpload.append({"_index": indexName, "_id": docId, "_type": "cur_doc", "_source": json.dumps(payload)})
+        
+            # If bulk linesToUpload
+            if len(linesToUpload) >= 5000:
+                uploadToElasticsearch(linesToUpload, indexName)
+                linesToUpload = []
+        
+        # If there are any lines left once loop is completed, upload them.
+        if len(linesToUpload) > 0:
             uploadToElasticsearch(linesToUpload, indexName)
-            linesToUpload = []
-
-    # If there are any lines left once loop is completed, upload them.
-    if len(linesToUpload) > 0:
-        uploadToElasticsearch(linesToUpload, indexName)
-
-    # Final Cleanups
-    print('')                       # Makes it nicer when running from CLI
-    global totalLinesUploadedCount
-    totalLinesUploadedCount = 0     # Reset count to 0 for next invocation
+        
+        # Final Cleanups
+        print('')                       # Makes it nicer when running from CLI
+        global totalLinesUploadedCount
+        totalLinesUploadedCount = 0     # Reset count to 0 for next invocation
 
 
 # Handles the uploading of files to the Elasticsearch endpoint, and printing upload details
 def uploadToElasticsearch(actions, indexName):
     global totalLinesUploadedCount
-
-    es = returnElasticsearchAuth()
     totalLinesUploadedCount += len(actions)
-    percent = round((totalLinesUploadedCount / totalLinesCount) * 100, 2)
-
-    helpers.bulk(es, actions)
+    
+    es = returnElasticsearchAuth()
+    
+    for i in range(0,10):
+        while True:
+            try:
+                helpers.bulk(es, actions)
+            except:
+                continue
+            break
+    
     currentRunTime = time.time() - startTime
-    print('* ' + str(totalLinesUploadedCount) + " of " + str(totalLinesCount) + " lines uploaded to index " + indexName + ". (" + str(percent) + "%) - runtime (" + str(round(currentRunTime, 2)) + 's)', end='\r')
+    print("* " + str(totalLinesUploadedCount) + " lines uploaded to index " + indexName + " - runtime (" + str(round(currentRunTime, 2)) + 's)', end='\r')
 
 
 # Return ES auth, depending on whether it's in a Lambda function or not
@@ -114,7 +111,7 @@ def manualLaunch():  # If not in a Lambda, launch main function and pass S3 even
                         "name": 'ansamual-cur-02-transformed',
                     },
                     "object": {
-                        "key": 'rmit-billing-reports/year=2017/month=11/day=08/hourly-report-2.json.gz',
+                        "key": 'ansamual-costreports/year%3D2018/month%3D03/day%3D05/quicksight_redshift_costreports-1.json.gz',
                     }
                 }
             }
