@@ -1,5 +1,6 @@
----
 Description: 'RMIT Example Template'
+
+# ----- PARAMETERS -----
 Parameters:
   VPCId:
       Description: VPC IDs
@@ -12,7 +13,7 @@ Parameters:
   AMI:
     Description: Amazon Machine Image
     Type: String
-    Default: ami-423bec20
+    Default: ami-423bec20 # Latest version of Amazon Linux in ap-southeast-2 07/06/2018
   InstanceType:
     Description: EC2 instance type
     Type: String
@@ -24,7 +25,7 @@ Parameters:
     - t2.medium
     - t2.large
     ConstraintDescription: Must be a valid EC2 instance type.
-  AllowedAccessCidr:
+  SSHAccessCidr:
       Description: The IP address range that can be used to SSH to the EC2 instances
       Type: String
       Default: 0.0.0.0/0
@@ -32,8 +33,10 @@ Parameters:
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
     Type: AWS::EC2::KeyPair::KeyName
+
+# ----- RESOURCES -----
 Resources:
-  # EC3 Hosts
+  # EC2 Instances
   JumpHost:
       Type: AWS::EC2::Instance
       Properties:
@@ -43,12 +46,17 @@ Resources:
         - !Ref JumpHostSG
         ImageId: !Ref AMI
         KeyName: !Ref KeyName
+        IamInstanceProfile: !Ref RootInstanceProfile
         Tags:
         - Key: Name
           Value: !Join
                    - '_'
                    - - !Ref AWS::StackName
                      - JumpHost
+        UserData:
+          Fn::Base64: !Sub |
+               #!/bin/bash -xe
+               echo 'hello' > /tmp/awsuserdata.txt
   WebServer:
     Type: AWS::EC2::Instance
     Properties:
@@ -57,7 +65,6 @@ Resources:
       SecurityGroupIds:
       - !Ref WebServerSG
       ImageId: !Ref AMI
-      KeyName: !Ref KeyName
       Tags:
         - Key: Name
           Value: !Join
@@ -66,11 +73,10 @@ Resources:
                      - WebServer
       UserData:
         Fn::Base64: !Sub |
-          #!/bin/bash -xe
-          yum update -y
-          yum -y install httpd
-          service httpd start
-
+             #!/bin/bash -xe
+             yum update -y
+             yum -y install httpd
+             service httpd start
   # Security Groups
   JumpHostSG:
     Type: AWS::EC2::SecurityGroup
@@ -81,11 +87,11 @@ Resources:
       - IpProtocol: tcp
         FromPort: 22
         ToPort: 22
-        CidrIp: !Ref AllowedAccessCidr
+        CidrIp: !Ref SSHAccessCidr
   WebServerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow SSH to Jump Host
+      GroupDescription: Allow SSH/HTTP to Web Server
       VpcId: !Ref VPCId
       SecurityGroupIngress:
       - IpProtocol: tcp
@@ -96,13 +102,53 @@ Resources:
         FromPort: 22
         ToPort: 22
         SourceSecurityGroupId: !Ref JumpHostSG
+  # IAM Role
+  RootRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "*"
+                Resource: "*"
+  RootInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        -
+          !Ref "RootRole"
+
+# ----- OUTPUTS -----
 Outputs:
   JumpHostID:
     Description: Jump Host's Instance ID
     Value: !Ref JumpHost
-  JumpHostIP:
+  JumpHostPublicIP:
     Description: Jump Host's Public IP
-    Value: !Ref JumpHost.PublicIp
-  WebHostID:
-    Description: Web Host's Instance ID
-    Value: !Ref WebHost
+    Value: !GetAtt JumpHost.PublicIp
+  WebServerID:
+    Description: Web Server's Instance ID
+    Value: !Ref WebServer
+  WebServerPrivateIP:
+    Description: Web Server's Private IP
+    Value: !GetAtt WebServer.PrivateIp
+  WebServerPublicDNS:
+    Description: Web Server's Public DNS
+    Value: !GetAtt WebServer.PublicDnsName

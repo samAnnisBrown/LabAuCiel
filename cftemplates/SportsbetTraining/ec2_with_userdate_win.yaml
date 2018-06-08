@@ -1,0 +1,49 @@
+---
+Description: 'What does this template do?'
+Parameters:
+  VPCSubnetId:
+    Description: Subnet ID list
+    Type: AWS::EC2::Subnet::Id
+    ConstraintDescription: must be an existing subnet.
+  EC2SecurityGroupIds:
+    Description: Security Group Id's
+    Type: AWS::EC2::SecurityGroup::Id
+    ConstraintDescription: must be an existing security group.
+  AMI:
+    Description: Amazon Machine Image
+    Type: String
+    Default: ami-307fa852
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    ConstraintDescription: must be a valid EC2 instance type.
+Resources:
+  EC2InstanceUserData:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType:
+        Ref: InstanceType
+      SubnetId:
+        Ref: VPCSubnetId
+      SecurityGroupIds:
+      - Ref: EC2SecurityGroupIds
+      ImageId:
+        Ref: AMI
+      UserData:
+        Fn::Base64: !Sub |
+                  <powershell>
+                  "AWS Userdata Test" > C:\UserdataOutput.txt
+                  Install-WindowsFeature -name Web-Server -IncludeManagementTools
+                  </powershell>
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value:
+      Ref: EC2InstanceUserData
