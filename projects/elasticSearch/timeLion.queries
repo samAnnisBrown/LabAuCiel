@@ -1,4 +1,0 @@
-.es(index=phd-event*, timefield='Timestamp', metric='count:ResourceType').label('CF Stack Envents').lines(fill=1), .es(index=phd-event*, timefield='PhdEventTime'), .es(index=phd-event*, timefield='Attachments.AttachTime').lines(fill=1).title('PHD Events')
-
-.es(index=phd-event*, timefield='Timestamp', metric='count:ResourceType', q='ResourceStatus:DELETE_*'),
-.es(index=phd-event*, timefield='Timestamp', metric='count:ResourceType', q='ResourceStatus:UPDATE*'),
